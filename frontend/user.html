@@ -1,129 +1,176 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Management</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            flex-direction: column;
-        }
-        .container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 90%;
-            max-width: 600px;
-            box-sizing: border-box;
-        }
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .Goto {
-            display: inline-block;
-            padding: 12px;
-            margin-bottom: 15px;
-            background-color: #3498db;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            text-align: center;
-            width: 90%;
-            max-width: 600px;
-        }
-        .backButton {
-            display: inline-block;
-            padding: 12px;
-            margin-top: 15px;
-            background-color: #95a5a6;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            text-align: center;
-            width: 90%;
-            max-width: 600px;
-        }
-        .delete, .edit {
-            border: none;
-            color: white;
-            padding: 10px 10px;
-            text-align: center;
-            text-decoration: none;
-            display: inline-block;
-            font-size: 16px;
-            margin: 4px 2px;
-            cursor: pointer;
-            border-radius: 10px;
-            transition-duration: 0.4s;
-            width: 48%;
-        }
-        .delete {
-            background-color: #e03b3b;
-        }
-        .edit {
-            background-color: #4CAF50;
-        }
-        .delete:hover {
-            background-color: #c0392b;
-        }
-        .edit:hover {
-            background-color: #388e3c;
-        }
-        #user {
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            background-color: #fff;
-            text-align: center;
-        }
-        .userss {
-            font-size: 20px;
-            color: #333;
-            font-weight: bold;
-            margin-right: 10px;
-            display: block;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        @media screen and (max-width: 768px) {
-            body {
-                height: auto;
-                padding: 20px;
-            }
-            .container {
-                width: 100%;
-                max-width: 100%;
-                padding: 15px;
-            }
-            .Goto, .delete, .edit {
-                width: 100%;
-                max-width: 100%;
-            }
-            .userss {
-                font-size: 18px;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <title>User Management</title>
+  <style>
+    .header {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center; /* ปรับให้ไม่ถูกบัง */
+      height: 100%;
+      flex-direction: column;
+    }
+
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 600px;
+      box-sizing: border-box;
+      margin-top: 50px; /* เพิ่มระยะห่างจากบน */
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* ปรับปุ่มไปหน้ากรอกข้อมูล */
+    .Goto {
+      display: inline-block;
+      padding: 8px 16px;
+      margin-bottom: 15px;
+      background-color: #6cb2eb;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      text-align: center;
+      width: auto;
+      max-width: 300px;
+      font-size: 14px;
+      margin-top: 10px; /* ปรับตำแหน่งปุ่มไปทางซ้าย */
+    }
+
+    /* ปรับปุ่ม Apply Filters ให้เด่น */
+    button {
+      padding: 10px 20px;
+      background-color: #dcdfe1;
+      color: #333;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      max-width: 200px;
+    }
+
+    button:hover {
+      background-color: #c8ccd1;
+    }
+
+    button:active {
+      background-color: #b0b4b8;
+    }
+
+    .backButton {
+      display: inline-block;
+      padding: 12px;
+      margin-top: 15px;
+      background-color: #95a5a6;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      text-align: center;
+      width: 90%;
+      max-width: 600px;
+    }
+
+    .delete, .edit {
+      border: none;
+      color: white;
+      padding: 10px 10px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 10px;
+      transition-duration: 0.4s;
+      width: 48%;
+    }
+
+    .delete {
+      background-color: #e74c3c;
+    }
+
+    .edit {
+      background-color: #2ecc71;
+    }
+
+    .delete:hover {
+      background-color: #c0392b;
+    }
+
+    .edit:hover {
+      background-color: #27ae60;
+    }
+
+    #user {
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #fff;
+      text-align: center;
+    }
+
+    .userss {
+      font-size: 20px;
+      color: #333;
+      font-weight: bold;
+      margin-right: 10px;
+      display: block;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    /* เพิ่มการรองรับมือถือ */
+    @media screen and (max-width: 768px) {
+      body {
+        height: auto;
+        padding: 20px;
+      }
+
+      .container {
+        width: 100%;
+        max-width: 100%;
+        padding: 15px;
+      }
+
+      .Goto, .delete, .edit {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .userss {
+        font-size: 18px;
+      }
+    }
+  </style>
 </head>
 <body>
 
-    
     <!-- ปุ่มย้อนกลับ -->
     <a href="index.html" class="Goto">ไปหน้ากรอกข้อมูล</a>
 
     <div class="container">
-        <h1>User Management</h1>
+        <h1>ระบบจัดการผู้ใช้</h1>
         
         <!-- ฟอร์มกรองข้อมูล -->
         <div>

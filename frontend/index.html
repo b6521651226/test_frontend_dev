@@ -25,7 +25,7 @@
       top: 10px;
       left: 10px;
       padding: 8px 16px;
-      background-color: #6cb2eb;
+      background-color: #b1b1b1;
       color: white;
       text-decoration: none;
       border-radius: 5px;
@@ -86,10 +86,25 @@
       background: #2ecc71;
     }
 
+    /* ปรับแต่งข้อความที่แสดงหลังจากกดปุ่ม */
     .message {
       text-align: center;
-      font-size: 16px;
+      font-size: 18px;  /* ขยายขนาดข้อความ */
+      font-weight: bold;
       margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+    }
+
+    .message.success {
+      background-color: #28a745; /* สีเขียวสำหรับข้อความสำเร็จ */
+      color: white;
+    }
+
+    .message.error {
+      background-color: #dc3545; /* สีแดงสำหรับข้อความผิดพลาด */
+      color: white;
     }
 
     /* เพิ่มการรองรับมือถือ */
@@ -193,8 +208,10 @@
           response = await axios.post(`${BASE_URL}/users`, userData);
         }
         document.getElementById('message').innerText = 'Data Submitted Successfully';
+        document.getElementById('message').classList.add('success');
       } catch (error) {
         document.getElementById('message').innerText = 'Error: ' + (error.response?.data?.message || 'Unknown error');
+        document.getElementById('message').classList.add('error');
       }
     }
   </script>

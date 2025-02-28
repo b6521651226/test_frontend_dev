@@ -27,15 +27,17 @@ const loadData = async (gender = 'all', sortOrder = 'id_asc', searchTerm = '') =
     users = searchData(users, searchTerm);
 
     const userDOM = document.getElementById('user');
-    let htmlData = '<div>';
-    users.forEach(user => {
-        htmlData += `<div>
-            <span class='userss'>${user.id} ${user.firstname} ${user.lastname}</span>
-            <a href='index.html?id=${user.id}'><button class='edit'>Edit</button></a>
-            <button class='delete' data-id='${user.id}'>Delete</button>
+    let htmlData = '';
+    users.forEach((user, index) => {
+        htmlData += `<div style="display: flex; justify-content: space-between;">
+            <span>ลำดับ ${index + 1}: ชื่อ  ${user.firstname}  ${user.lastname} ID (${user.id})</span>
+            
+            <div>
+                <a href='index.html?id=${user.id}'><button class='edit'>Edit</button></a>
+                <button class='delete' data-id='${user.id}'>Delete</button>
+            </div>
         </div>`;
     });
-    htmlData += '</div>';
     userDOM.innerHTML = htmlData;
 
     // การจัดการปุ่ม delete
@@ -55,6 +57,44 @@ const loadData = async (gender = 'all', sortOrder = 'id_asc', searchTerm = '') =
             }
         });
     }
+};
+
+const toggleTable = () => {
+    const tableContainer = document.getElementById('table-container');
+    const userContainer = document.getElementById('user');
+    
+    if (tableContainer.style.display === 'none') {
+        tableContainer.style.display = 'block';
+        userContainer.style.display = 'none';
+        loadTable();
+    } else {
+        tableContainer.style.display = 'none';
+        userContainer.style.display = 'block';
+    }
+};
+
+const loadTable = async () => {
+    const response = await axios.get(`${BASE_URL}/users`);
+    const users = response.data;
+
+    const table = document.getElementById('dataTable');
+    table.innerHTML = `<tr>
+        <th>ลำดับ</th>
+        <th>ชื่อ</th>
+        <th>นามสกุล</th>
+        <th>อายุ</th>
+        <th>เพศ</th>
+    </tr>`;
+
+    users.forEach((user, index) => {
+        table.innerHTML += `<tr>
+            <td>${index + 1}</td>
+            <td>${user.firstname}</td>
+            <td>${user.lastname}</td>
+            <td>${user.age}</td>
+            <td>${user.gender}</td>
+        </tr>`;
+    });
 };
 
 const filterData = (data, gender) => {

@@ -42,6 +42,18 @@
             width: 90%;
             max-width: 600px;
         }
+        .backButton {
+            display: inline-block;
+            padding: 12px;
+            margin-top: 15px;
+            background-color: #95a5a6;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+        }
         .delete, .edit {
             border: none;
             color: white;
@@ -105,11 +117,40 @@
     </style>
 </head>
 <body>
-    <a href="index.html" class="Goto">Back to register</a>
+
+    
+    <!-- ปุ่มย้อนกลับ -->
+    <a href="index.html" class="Goto">ไปหน้ากรอกข้อมูล</a>
+
     <div class="container">
         <h1>User Management</h1>
+        
+        <!-- ฟอร์มกรองข้อมูล -->
+        <div>
+            <label for="genderFilter">กรองตามเพศ:</label>
+            <select id="genderFilter">
+                <option value="all">ทั้งหมด</option>
+                <option value="ชาย">ชาย</option>
+                <option value="หญิง">หญิง</option>
+                <option value="ไม่ระบุ">ไม่ระบุ</option>
+            </select>
+
+            <label for="sortOrder">เรียงตาม:</label>
+            <select id="sortOrder">
+                <option value="firstname_asc">ชื่อ (A-Z)</option>
+                <option value="firstname_desc">ชื่อ (Z-A)</option>
+                <option value="age_asc">อายุ (น้อยไปมาก)</option>
+                <option value="age_desc">อายุ (มากไปน้อย)</option>
+            </select>
+
+            <input type="text" id="searchTerm" placeholder="ค้นหาชื่อหรือนามสกุล">
+
+            <button onclick="applyFilters()">Apply Filters</button>
+        </div>
+
         <div id="user"></div>
     </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
     <script src="user.js"></script>
 </body>

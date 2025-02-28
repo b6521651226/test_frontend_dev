@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Form</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+    }
+    .container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 600px;
+      box-sizing: border-box;
+    }
+    .header {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-input {
+      margin-bottom: 10px;
+    }
+    .form-input label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .form-input input, .form-input textarea {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      box-sizing: border-box;
+    }
+    .button {
+      width: 100%;
+      padding: 12px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+    .button:hover {
+      background: #45a049;
+    }
+    .message {
+      text-align: center;
+      font-size: 16px;
+      margin-top: 10px;
+    }
+    .Goto {
+      display: inline-block;
+      padding: 12px;
+      margin-bottom: 15px;
+      background-color: #3498db;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+      text-align: center;
+      width: 90%;
+      max-width: 600px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <a href="user.html" class="Goto">Go to UserManagement</a>
+  <div class="container">
+    <div class="header">User Information Form</div>
+    <div class="form-input">
+      <label>ชื่อจริง</label>
+      <input id="firstname" type="text">
+    </div>
+    <div class="form-input">
+      <label>นามสกุล</label>
+      <input id="lastname" type="text">
+    </div>
+    <div class="form-input">
+      <label>อายุ</label>
+      <input id="age" type="number" min="0">
+    </div>
+    <div class="form-input">
+      <label>เพศ</label>
+      <div>
+        <input name="gender" type="radio" value="ชาย"> ชาย
+        <input name="gender" type="radio" value="หญิง"> หญิง
+      </div>
+    </div>
+    <div class="form-input">
+      <label>ความสนใจ</label>
+      <textarea id="interests"></textarea>
+    </div>
+    <div class="form-input">
+      <label>คำอธิบาย</label>
+      <textarea id="description"></textarea>
+    </div>
+    <div id="message" class="message"></div>
+    <button onclick="submitData()" class="button">ส่งข้อมูล</button>
+  </div>
+<script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
+<script>
+  const BASE_URL = 'http://localhost:8000';
+  const urlParams = new URLSearchParams(window.location.search);
+  const userId = urlParams.get('id');
+
+  window.onload = async () => {
+    if (userId) {
+      await loadUserForEdit(userId);
+    }
+  };
+
+  async function loadUserForEdit(id) {
+    try {
+      const response = await axios.get(`${BASE_URL}/users/${id}`);
+      const user = response.data;
+      document.getElementById('firstname').value = user.firstname;
+      document.getElementById('lastname').value = user.lastname;
+      document.getElementById('age').value = user.age;
+      document.querySelector(`input[name="gender"][value="${user.gender}"]`).checked = true;
+      document.getElementById('interests').value = user.interests;
+      document.getElementById('description').value = user.description;
+    } catch (error) {
+      console.error('Error loading user:', error);
+    }
+  }
+
+  async function submitData() {
+    const userData = {
+      firstname: document.getElementById('firstname').value,
+      lastname: document.getElementById('lastname').value,
+      age: document.getElementById('age').value,
+      gender: document.querySelector('input[name="gender"]:checked')?.value,
+      interests: document.getElementById('interests').value,
+      description: document.getElementById('description').value,
+    };
+    
+    try {
+      let response;
+      if (userId) {
+        response = await axios.put(`${BASE_URL}/users/${userId}`, userData);
+      } else {
+        response = await axios.post(`${BASE_URL}/users`, userData);
+      }
+      document.getElementById('message').innerText = 'Data Submitted Successfully';
+    } catch (error) {
+      document.getElementById('message').innerText = 'Error: ' + (error.response?.data?.message || 'Unknown error');
+    }
+  }
+</script>
+</body>
+</html>

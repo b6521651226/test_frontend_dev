@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 600px;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .Goto {
+            display: inline-block;
+            padding: 12px;
+            margin-bottom: 15px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            text-align: center;
+            width: 90%;
+            max-width: 600px;
+        }
+        .delete, .edit {
+            border: none;
+            color: white;
+            padding: 10px 10px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition-duration: 0.4s;
+            width: 48%;
+        }
+        .delete {
+            background-color: #e03b3b;
+        }
+        .edit {
+            background-color: #4CAF50;
+        }
+        .delete:hover {
+            background-color: #c0392b;
+        }
+        .edit:hover {
+            background-color: #388e3c;
+        }
+        #user {
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #fff;
+            text-align: center;
+        }
+        .userss {
+            font-size: 20px;
+            color: #333;
+            font-weight: bold;
+            margin-right: 10px;
+            display: block;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        @media screen and (max-width: 768px) {
+            body {
+                height: auto;
+                padding: 20px;
+            }
+            .container {
+                width: 100%;
+                max-width: 100%;
+                padding: 15px;
+            }
+            .Goto, .delete, .edit {
+                width: 100%;
+                max-width: 100%;
+            }
+            .userss {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <a href="index.html" class="Goto">Back to register</a>
+    <div class="container">
+        <h1>User Management</h1>
+        <div id="user"></div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.1.2/dist/axios.min.js"></script>
+    <script src="user.js"></script>
+</body>
+</html>

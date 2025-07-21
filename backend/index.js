@@ -1,8 +1,13 @@
 const express = require('express');
+const cors = require('cors');
 const app = express();
-app.use(express.json());
+const orderRoutes = require('./routes/orders')
 
-// ดึง route มาเชื่อม
+
+app.use(cors()); // <<< เพิ่มตรงนี้
+app.use(express.json());
+app.use('/api/orders', orderRoutes)
+
 const productRoutes = require('./routes/products');
 app.use('/api/products', productRoutes);
 

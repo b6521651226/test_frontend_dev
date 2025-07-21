@@ -3,7 +3,7 @@ version: '3.7'
 services:
   db:
     image: mysql:5.7
-    container_name: mysql_db_830
+    container_name: db
     command: --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -11,7 +11,7 @@ services:
     ports:
       - "8830:3306"
     volumes:
-      - mysql_data_830:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
       - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - weblab830
@@ -19,9 +19,9 @@ services:
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin:latest
-    container_name: phpmyadmin_830
+    container_name: phpmyadmin
     environment:
-      PMA_HOST: mysql_db_830
+      PMA_HOST: db
       PMA_PORT: 3306
       PMA_USER: root
       PMA_PASSWORD: root
@@ -38,5 +38,5 @@ networks:
     driver: bridge
 
 volumes:
-  mysql_data_830:
+  mysql_data:
     driver: local

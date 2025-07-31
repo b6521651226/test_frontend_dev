@@ -1,15 +1,22 @@
-// ✅ /frontend-npps/src/router/index.js
 import { createRouter, createWebHistory } from 'vue-router'
+
 import HomeView from '../views/HomeView.vue'
+import ContactView from '../views/ContactView.vue'
+import ProfileView from '../views/ProfileView.vue'
 import CartView from '../views/CartView.vue'
 import CheckoutView from '../views/CheckoutView.vue'
+
 import AdminLogin from '../views/AdminLogin.vue'
 import AdminDashboard from '../views/AdminDashboard.vue'
 
 const routes = [
   { path: '/', component: HomeView },
+  { path: '/contact', component: ContactView },
+  { path: '/profile', component: ProfileView },
   { path: '/cart', component: CartView },
   { path: '/checkout', component: CheckoutView },
+
+  // admin
   { path: '/admin/login', component: AdminLogin },
   { path: '/admin/dashboard', component: AdminDashboard }
 ]

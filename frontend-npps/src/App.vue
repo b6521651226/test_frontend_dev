@@ -1,18 +1,13 @@
 <template>
   <div>
-    <nav>
-      <router-link to="/">หน้าหลัก</router-link> |
-      <router-link to="/cart">ตะกร้า</router-link> |
-      <router-link to="/checkout">Checkout</router-link> |
-      <router-link to="/admin/login">Admin</router-link>
-    </nav>
+    <Navbar v-if="!$route.path.startsWith('/admin')" />
     <router-view />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-
+import Navbar from './components/Navbar.vue'
 const products = ref([])
 const loading = ref(true)
 

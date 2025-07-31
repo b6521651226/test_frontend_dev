@@ -1,52 +1,164 @@
 <template>
-  <div>
-    <h1>หน้าร้านขายเครื่องมือช่าง NPPS</h1>
+  <div class="container">
+    <div class="search-container">
+      <input v-model="search" type="text" placeholder="ค้นหาสินค้า..." />
+    </div>
 
-    <div v-if="loading">กำลังโหลด...</div>
-    <div v-else class="grid">
-      <div v-for="product in products" :key="product.id" class="card">
-        <h3>{{ product.name }}</h3>
-        <p>{{ product.description }}</p>
-        <p>ราคา: {{ product.price }} บาท</p>
-        <button @click="addToCart(product)">เพิ่มลงตะกร้า</button>
+    <section class="product-container">
+      <div class="product-card" v-for="product in filteredProducts" :key="product.id">
+        <img :src="product.image_url" :alt="product.name" class="product-image" />
+        <p>{{ product.name }}</p>
+        <p>ราคา {{ product.price }} บาท</p>
+
+        <!-- ตัวเลือกสินค้า -->
+        <label>ตัวเลือก:</label>
+        <select v-model="product.selectedOption">
+          <option disabled value="">-- กรุณาเลือก --</option>
+          <option v-for="option in product.options" :key="option" :value="option">
+            {{ option }}
+          </option>
+        </select>
+
+        <label>จำนวน:</label>
+        <input type="number" v-model.number="product.qty" min="1" />
+        <button @click="addToCart(product)">เพิ่มไปยังตะกร้า</button>
       </div>
+    </section>
+
+    <div class="pagination">
+      <button @click="prevPage">ก่อนหน้า</button>
+      <button @click="nextPage">ถัดไป</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useCart } from '../composables/useCart'
+import { ref, computed, onMounted } from 'vue'
+const search = ref('')
+const page = ref(1)
+const itemsPerPage = 4
 
-const { addToCart } = useCart()
 const products = ref([])
 const loading = ref(true)
 
 onMounted(async () => {
   try {
     const res = await fetch('http://localhost:4000/api/products')
-    products.value = await res.json()
+    const data = await res.json()
+
+    // ✅ เติมค่า default สำหรับ qty และ options
+    products.value = data.map((p) => ({
+      ...p,
+      qty: 1,
+      options: p.options || ['สีดำ', 'สีเงิน', 'ขนาด M', 'ขนาด L'],
+      selectedOption: ''
+    }))
   } catch (err) {
-    console.error(err)
+    console.error('โหลดสินค้าไม่สำเร็จ', err)
   } finally {
     loading.value = false
   }
 })
 
-function addToCartAction(product) {
-  addToCart(product)
+const filteredProducts = computed(() => {
+  const start = (page.value - 1) * itemsPerPage
+  return products.value
+    .filter((p) => p.name.toLowerCase().includes(search.value.toLowerCase()))
+    .slice(start, start + itemsPerPage)
+})
+
+function nextPage() {
+  if ((page.value + 1) * itemsPerPage <= products.value.length) page.value++
+}
+function prevPage() {
+  if (page.value > 1) page.value--
+}
+
+async function addToCart(product) {
+  if (!product.selectedOption) {
+    alert('กรุณาเลือกตัวเลือกสินค้าก่อนเพิ่มลงตะกร้า')
+    return
+  }
+
+  try {
+    const res = await fetch('http://localhost:4000/api/cart', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id: product.id,
+        quantity: product.qty,
+        option: product.selectedOption,
+      })
+    })
+
+    if (!res.ok) throw new Error('เพิ่มสินค้าไม่สำเร็จ')
+    alert(`${product.name} (${product.selectedOption}) ถูกเพิ่มลงตะกร้าแล้ว`)
+  } catch (err) {
+    alert('เกิดข้อผิดพลาดในการเพิ่มสินค้า: ' + err.message)
+  }
 }
 </script>
 
 <style scoped>
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
+
+.container {
+  font-family: 'Kanit', sans-serif;
+  padding: 0;
+  margin: 0;
 }
-.card {
+
+.search-container {
+  margin: 20px auto;
+  display: flex;
+  justify-content: center;
+}
+.search-container input {
+  padding: 10px;
+  font-size: 16px;
+  width: 50%;
   border: 1px solid #ddd;
-  padding: 1rem;
+}
+
+.product-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+.product-card {
+  border: 1px solid #ddd;
   text-align: center;
+  padding: 10px;
+}
+.product-image {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  margin: 0 auto 10px;
+}
+.product-card button {
+  margin-top: 10px;
+  background-color: #f1c40f;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+.product-card button:hover {
+  background-color: #e0b90f;
+}
+.pagination {
+  text-align: center;
+  margin: 20px;
+}
+.pagination button {
+  padding: 10px;
+  margin: 0 5px;
+  background-color: #f1c40f;
+  border: none;
+}
+.pagination button:hover {
+  background-color: #e0b90f;
 }
 </style>

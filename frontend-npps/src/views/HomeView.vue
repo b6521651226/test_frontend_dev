@@ -10,7 +10,6 @@
         <p>{{ product.name }}</p>
         <p>ราคา {{ product.price }} บาท</p>
 
-        <!-- ตัวเลือกสินค้า -->
         <label>ตัวเลือก:</label>
         <select v-model="product.selectedOption">
           <option disabled value="">-- กรุณาเลือก --</option>
@@ -33,11 +32,12 @@
 </template>
 
 <script setup>
+
 import { ref, computed, onMounted } from 'vue'
 const search = ref('')
 const page = ref(1)
 const itemsPerPage = 4
-
+const user_id = localStorage.getItem('user_id') || 1
 const products = ref([])
 const loading = ref(true)
 
@@ -46,7 +46,6 @@ onMounted(async () => {
     const res = await fetch('http://localhost:4000/api/products')
     const data = await res.json()
 
-    // ✅ เติมค่า default สำหรับ qty และ options
     products.value = data.map((p) => ({
       ...p,
       qty: 1,
@@ -85,9 +84,10 @@ async function addToCart(product) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        product_id: product.id,
+        user_id: 1, // สมมุติว่า user_id เป็น 1
+        product_id: product.product_id,
         quantity: product.qty,
-        option: product.selectedOption,
+        product_option: product.selectedOption
       })
     })
 

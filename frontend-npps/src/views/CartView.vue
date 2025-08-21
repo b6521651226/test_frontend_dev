@@ -8,7 +8,7 @@
     <div
       v-else
       v-for="item in items"
-      :key="item.id"
+      :key="item.cart_id"
       class="cart-item"
     >
       <img :src="item.image_url" :alt="item.name" class="cart-image" />
@@ -21,11 +21,11 @@
         <div class="row">
           <label>ตัวเลือก:</label>
 
-          <!-- ถ้ามีรายการตัวเลือกจาก backend (เช่น item.available_options เป็น array) ให้แสดง select -->
+          <!-- ถ้ามีรายการตัวเลือกจาก backend -->
           <select
             v-if="Array.isArray(item.available_options) && item.available_options.length"
             v-model="item.product_option"
-            @change="updateItem(item.id, { product_option: item.product_option })"
+            @change="updateItem(item.cart_id, { product_option: item.product_option })"
           >
             <option
               v-for="opt in item.available_options"
@@ -36,11 +36,11 @@
             </option>
           </select>
 
-          <!-- ถ้าไม่มี ก็ให้แก้เป็นข้อความอิสระ -->
+          <!-- ถ้าไม่มี -->
           <input
             v-else
             v-model="item.product_option"
-            @change="updateItem(item.id, { product_option: item.product_option })"
+            @change="updateItem(item.cart_id, { product_option: item.product_option })"
             placeholder="เช่น สี/ขนาด"
           />
         </div>
@@ -65,15 +65,17 @@
         </p>
 
         <div class="actions">
-          <button class="danger" @click="removeItem(item.id)">ลบสินค้า</button>
+          <button class="danger" @click="removeItem(item.cart_id)">ลบสินค้า</button>
         </div>
       </div>
     </div>
 
     <div v-if="items.length" class="cart-summary">
       <div>ราคารวมทั้งหมด: <b>{{ format(cartTotal) }}</b> บาท</div>
-      <!-- ใส่ปุ่มเช็คเอาท์ตามต้องการ -->
-      <!-- <button class="checkout">สั่งซื้อ</button> -->
+    </div>
+    <div v-if="items.length" class="cart-summary">
+      <div>ราคารวมทั้งหมด: <b>{{ format(cartTotal) }}</b> บาท</div>
+      <button class="checkout" @click="$router.push('/checkout')">ชำระเงิน</button>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
@@ -82,14 +84,14 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-// ใช้ path ให้ตรงโปรเจกต์ของมึง: ถ้าไม่ได้ตั้ง alias '@' ให้ใช้ '../lib/api'
 import api from '../lib/api'
 
 const items = ref([])
 const loading = ref(false)
 const error = ref('')
 
-const format = (n) => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const format = (n) =>
+  Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const cartTotal = computed(() =>
   items.value.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0)
 )
@@ -101,7 +103,6 @@ async function loadCart() {
   error.value = ''
   try {
     const { data } = await api.get('/cart')
-    // คาดหวังโครงสร้าง item: { id, product_id, name, price, quantity, product_option, image_url, available_options? }
     items.value = data || []
   } catch (e) {
     error.value = 'โหลดข้อมูลตะกร้าล้มเหลว'
@@ -114,13 +115,9 @@ async function loadCart() {
 async function updateItem(id, payload) {
   try {
     await api.patch(`/cart/${id}`, payload)
-    // อัปเดตราคา/จำนวนบนจอแล้ว ไม่จำเป็นต้องรีโหลดทั้งตะกร้า
-    // แต่ถ้า backend คำนวณส่วนลด/ราคาพิเศษ อยากแม่นยำให้เรียก loadCart()
-    // await loadCart()
   } catch (e) {
     console.error(e)
     error.value = e?.response?.data?.message || 'อัปเดตรายการไม่สำเร็จ'
-    // รีโหลดเพื่อคืนค่าเดิมหาก patch fail
     await loadCart()
   }
 }
@@ -128,19 +125,19 @@ async function updateItem(id, payload) {
 function onQtyChange(item) {
   const q = Math.max(1, Number(item.quantity) || 1)
   item.quantity = q
-  updateItem(item.id, { quantity: q })
+  updateItem(item.cart_id, { quantity: q })
 }
 
 function incQty(item) {
   item.quantity = Number(item.quantity || 1) + 1
-  updateItem(item.id, { quantity: item.quantity })
+  updateItem(item.cart_id, { quantity: item.quantity })
 }
 
 function decQty(item) {
   const next = Math.max(1, Number(item.quantity || 1) - 1)
   if (next !== item.quantity) {
     item.quantity = next
-    updateItem(item.id, { quantity: next })
+    updateItem(item.cart_id, { quantity: next })
   }
 }
 
@@ -148,7 +145,7 @@ async function removeItem(id) {
   if (!confirm('ลบสินค้ารายการนี้ออกจากตะกร้า?')) return
   try {
     await api.delete(`/cart/${id}`)
-    items.value = items.value.filter((it) => it.id !== id)
+    items.value = items.value.filter((it) => it.cart_id !== id)
   } catch (e) {
     console.error(e)
     error.value = e?.response?.data?.message || 'ลบสินค้าไม่สำเร็จ'

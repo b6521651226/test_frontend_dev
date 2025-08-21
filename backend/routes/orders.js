@@ -1,61 +1,108 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db'); // mysql2/promise pool
+const pool = require('../config/db');
 const { verifyToken } = require('../middlewares/auth');
+const upload = require('../middlewares/upload'); // << เพิ่ม
 
 // POST /api/orders
-router.post('/', verifyToken, async (req, res) => {
-  const uid = req.user.uid;           // ✅ จาก token
-  const { cart = [] } = req.body;
+router.post('/', verifyToken, upload.single('slip'), async (req, res) => {
+  const uid = req.user.uid;
 
-  if (!Array.isArray(cart) || cart.length === 0) {
+  let items = [];
+  try {
+    items = JSON.parse(req.body.items || '[]');
+  } catch (e) {
+    return res.status(400).json({ message: 'items ต้องเป็น JSON array' });
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: 'ตะกร้าว่าง' });
   }
 
-  const conn = await db.getConnection();
+  const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    // ดึงราคาปัจจุบันจาก DB กันลูกค้าปรับราคาเอง
-    const ids = cart.map(i => i.id);
+    // ดึงราคาจริงจาก DB
+    const ids = items.map(i => i.product_id);
     const [rows] = await conn.query(
-      `SELECT product_id, price FROM products WHERE product_id IN (${ids.map(()=>'?').join(',')})`,
+      `SELECT product_id, price FROM products WHERE product_id IN (${ids.map(() => '?').join(',')})`,
       ids
     );
     const priceMap = new Map(rows.map(r => [r.product_id, Number(r.price)]));
 
-    // คำนวณยอดรวมจากราคาใน DB
     let total = 0;
-    for (const item of cart) {
-      const price = priceMap.get(item.id);
-      if (price == null) {
-        throw new Error(`สินค้า id=${item.id} ไม่มีอยู่`);
-      }
-      total += price * Number(item.qty || 0);
+    for (const item of items) {
+      const price = priceMap.get(item.product_id);
+      if (price == null) throw new Error(`สินค้า id=${item.product_id} ไม่มีอยู่`);
+      total += price * Number(item.quantity || 0);
     }
 
-    // สร้างออเดอร์
+    // insert order
     const [orderResult] = await conn.query(
       'INSERT INTO orders (user_id, status, total_price) VALUES (?, ?, ?)',
       [uid, 'pending', total]
     );
     const orderId = orderResult.insertId;
 
-    // เพิ่มรายการออเดอร์ (ใช้ราคาจาก DB)
-    const values = cart.map(i => [orderId, i.id, i.qty, priceMap.get(i.id)]);
+    // insert order_items
+    const values = items.map(i => [orderId, i.product_id, i.quantity, priceMap.get(i.product_id)]);
     await conn.query(
       'INSERT INTO order_items (order_id, product_id, quantity, price) VALUES ?',
       [values]
     );
 
+    // insert payment
+    const slipUrl = req.file ? `/uploads/slips/${req.file.filename}` : null;
+    await conn.query(
+      'INSERT INTO payments (order_id, payment_slip_url, status) VALUES (?, ?, ?)',
+      [orderId, slipUrl, 'pending']
+    );
+
     await conn.commit();
-    res.status(201).json({ message: 'สร้างออเดอร์แล้ว', orderId, total });
+    res.status(201).json({ message: 'สร้างออเดอร์แล้ว', orderId, total, slip: slipUrl });
   } catch (err) {
     await conn.rollback();
-    console.error(err);
+    console.error('[ORDER_ERROR]', err);
     res.status(500).json({ message: 'ผิดพลาด', detail: err.message });
   } finally {
     conn.release();
+  }
+});
+
+// GET /api/orders/my
+router.get('/my', verifyToken, async (req, res) => {
+  const uid = req.user.uid;
+  try {
+    const [orders] = await pool.query(
+      `SELECT o.order_id, o.status, o.total_price, o.created_at, o.updated_at,
+              p.payment_slip_url, p.status AS payment_status,
+              d.tracking_number         -- ✅ เพิ่ม tracking_number
+       FROM orders o
+       LEFT JOIN payments p ON o.order_id = p.order_id
+       LEFT JOIN deliveries d ON o.order_id = d.order_id   -- ✅ join deliveries
+       WHERE o.user_id = ?
+       ORDER BY o.created_at DESC`,
+      [uid]
+    );
+
+    // ดึง items ของแต่ละ order
+    for (const order of orders) {
+      const [items] = await pool.query(
+        `SELECT oi.product_id, oi.quantity, oi.price,
+                pr.product_name, pr.image_url
+         FROM order_items oi
+         JOIN products pr ON oi.product_id = pr.product_id
+         WHERE oi.order_id = ?`,
+        [order.order_id]
+      );
+      order.items = items;
+    }
+
+    res.json(orders);
+  } catch (err) {
+    console.error('[ORDER_MY_ERROR]', err);
+    res.status(500).json({ message: 'ดึงประวัติคำสั่งซื้อล้มเหลว' });
   }
 });
 

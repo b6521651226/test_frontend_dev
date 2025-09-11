@@ -46,7 +46,8 @@
         <div v-if="expanded === o.order_id" class="details">
           <ul>
             <li v-for="it in o.items" :key="it.product_id" class="item">
-              <img :src="it.image_url" alt="" />
+              <!-- ✅ prepend apiBase -->
+              <img :src="apiBase + it.image_url" alt="" />
               <span>{{ it.product_name }} × {{ it.quantity }}</span>
               <b>{{ format(it.price * it.quantity) }} ฿</b>
               <small v-if="it.product_option">({{ it.product_option }})</small>
@@ -136,6 +137,7 @@ function format(n) {
   return Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2 })
 }
 </script>
+
 
 <style scoped>
 .profile-container {

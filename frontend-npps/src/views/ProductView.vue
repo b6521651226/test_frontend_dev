@@ -5,18 +5,22 @@
     </div>
 
     <section class="product-container">
-      <div class="product-card" v-for="product in filteredProducts" :key="product.id">
-        <img :src="product.image_url" :alt="product.product_name" class="product-image" />
+      <div class="product-card" v-for="product in filteredProducts" :key="product.product_id">
+        <!-- ✅ prepend apiBase ให้รูป -->
+        <img :src="apiBase + product.image_url" :alt="product.product_name" class="product-image" />
         <p>{{ product.product_name }}</p>
         <p>ราคา {{ product.price }} บาท</p>
 
-        <label>ตัวเลือก:</label>
-        <select v-model="product.selectedOption">
-          <option disabled value="">-- กรุณาเลือก --</option>
-          <option v-for="option in product.options" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
+          <!-- ✅ โชว์จำนวนสต็อก -->
+        <p>คงเหลือ: {{ product.stock }} ชิ้น</p>
+
+        <!-- เปลี่ยนจาก dropdown → text input -->
+        <label>หมายเหตุสินค้า:</label>
+        <input
+          type="text"
+          v-model="product.selectedOption"
+          placeholder="หมายเหตุถึงร้านค้า(ถ้ามี)"
+        />
 
         <label>จำนวน:</label>
         <input type="number" v-model.number="product.qty" min="1" />
@@ -33,13 +37,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import api from '@/lib/api' // ✅ import axios instance ที่แนบ token อัตโนมัติ
+import api from '@/lib/api'
 
 const search = ref('')
 const page = ref(1)
 const itemsPerPage = 4
 const products = ref([])
 const loading = ref(true)
+const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:4000'  // ✅ เพิ่มตัวนี้
 
 onMounted(async () => {
   try {
@@ -49,8 +54,7 @@ onMounted(async () => {
     products.value = data.map((p) => ({
       ...p,
       qty: 1,
-      options: p.options || ['สีดำ', 'สีเงิน', 'ขนาด M', 'ขนาด L'],
-      selectedOption: ''
+      selectedOption: '' // ใช้ text เป็นหมายเหตุ
     }))
   } catch (err) {
     console.error('โหลดสินค้าไม่สำเร็จ', err)
@@ -74,8 +78,9 @@ function prevPage() {
 }
 
 async function addToCart(product) {
-  if (!product.selectedOption) {
-    alert('กรุณาเลือกตัวเลือกสินค้าก่อนเพิ่มลงตะกร้า')
+  // ✅ กันไม่ให้ใส่จำนวนเกิน stock
+  if (product.qty > product.stock) {
+    alert(`ไม่สามารถเพิ่มเกินจำนวนสต็อก (${product.stock} ชิ้น) ได้`)
     return
   }
 
@@ -83,11 +88,9 @@ async function addToCart(product) {
     await api.post('/cart', {
       product_id: product.product_id,
       quantity: product.qty,
-      product_option: product.selectedOption
-      // ✅ ไม่ต้องส่ง user_id เพราะ backend ใช้ req.user จาก token
+      product_option: product.selectedOption // ✅ ส่งไปเป็นหมายเหตุ
     })
-
-    alert(`${product.product_name} (${product.selectedOption}) ถูกเพิ่มลงตะกร้าแล้ว`)
+    alert(`${product.product_name} ถูกเพิ่มลงตะกร้าแล้ว`)
   } catch (err) {
     alert('เกิดข้อผิดพลาดในการเพิ่มสินค้า: ' + err.response?.data?.message || err.message)
   }

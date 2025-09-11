@@ -52,6 +52,14 @@ router.post('/', verifyToken, upload.single('slip'), async (req, res) => {
       [values]
     );
 
+    // ✅ ตัดสต็อกจาก products
+    for (const item of items) {
+      await conn.query(
+        'UPDATE products SET stock = stock - ? WHERE product_id = ? AND stock >= ?',
+        [item.quantity, item.product_id, item.quantity]
+      );
+    }
+
     // insert payment
     const slipUrl = req.file ? `/uploads/slips/${req.file.filename}` : null;
     await conn.query(

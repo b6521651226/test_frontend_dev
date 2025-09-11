@@ -11,7 +11,8 @@
       :key="item.cart_id"
       class="cart-item"
     >
-      <img :src="item.image_url" :alt="item.name" class="cart-image" />
+      <!-- ✅ prepend apiBase -->
+      <img :src="apiBase + item.image_url" :alt="item.name" class="cart-image" />
 
       <div class="cart-info">
         <p class="name">{{ item.name }}</p>
@@ -19,9 +20,8 @@
 
         <!-- ตัวเลือกสินค้า -->
         <div class="row">
-          <label>ตัวเลือก:</label>
+          <label>หมายเหตุ:</label>
 
-          <!-- ถ้ามีรายการตัวเลือกจาก backend -->
           <select
             v-if="Array.isArray(item.available_options) && item.available_options.length"
             v-model="item.product_option"
@@ -36,12 +36,11 @@
             </option>
           </select>
 
-          <!-- ถ้าไม่มี -->
           <input
             v-else
             v-model="item.product_option"
             @change="updateItem(item.cart_id, { product_option: item.product_option })"
-            placeholder="เช่น สี/ขนาด"
+            placeholder="หมายเหตุถึงร้านค้า(ถ้ามี)"
           />
         </div>
 
@@ -89,6 +88,7 @@ import api from '../lib/api'
 const items = ref([])
 const loading = ref(false)
 const error = ref('')
+const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:4000'   // ✅ เพิ่ม
 
 const format = (n) =>
   Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -124,12 +124,22 @@ async function updateItem(id, payload) {
 
 function onQtyChange(item) {
   const q = Math.max(1, Number(item.quantity) || 1)
-  item.quantity = q
-  updateItem(item.cart_id, { quantity: q })
+  if (q > item.stock) {
+    alert(`ไม่สามารถสั่งเกิน ${item.stock} ชิ้นได้`)
+    item.quantity = item.stock
+  } else {
+    item.quantity = q
+  }
+  updateItem(item.cart_id, { quantity: item.quantity })
 }
 
 function incQty(item) {
-  item.quantity = Number(item.quantity || 1) + 1
+  const next = Number(item.quantity || 1) + 1
+  if (next > item.stock) {
+    alert(`ไม่สามารถสั่งเกิน ${item.stock} ชิ้นได้`)
+    return
+  }
+  item.quantity = next
   updateItem(item.cart_id, { quantity: item.quantity })
 }
 
@@ -152,6 +162,8 @@ async function removeItem(id) {
   }
 }
 </script>
+
+
 
 <style scoped>
 .cart-container { padding: 20px; font-family: 'Kanit', sans-serif; }

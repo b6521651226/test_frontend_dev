@@ -5,6 +5,7 @@ const path = require('path');   // ✅ import path
 const app = express();
 
 const orderRoutes = require('./routes/orders');
+const uploadRoutes = require('./routes/uploads')
 const cartRoutes = require('./routes/cart');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -18,6 +19,7 @@ app.use(express.json());
 app.use('/api/admin', verifyToken, adminRoutes);
 // auth
 app.use('/api/auth', authRoutes);
+app.use('/api/upload', uploadRoutes)
 
 // ✅ ให้ express เสิร์ฟไฟล์ static ในโฟลเดอร์ uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

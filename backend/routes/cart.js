@@ -77,7 +77,8 @@ router.get('/', async (req, res) => {
          c.product_option,
          p.product_name AS name,
          p.price,
-         p.image_url
+         p.image_url,
+         p.stock                     -- ✅ เพิ่มสต็อกเข้ามา
        FROM cart c
        JOIN products p ON c.product_id = p.product_id
        WHERE c.user_id = ?
@@ -91,6 +92,7 @@ router.get('/', async (req, res) => {
     res.status(500).json({ message: 'ดึงข้อมูลตะกร้าล้มเหลว' });
   }
 });
+
 
 /**
  * PATCH /api/cart/:id

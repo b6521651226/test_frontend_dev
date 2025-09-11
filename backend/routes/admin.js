@@ -1,7 +1,9 @@
 const express = require('express')
 const router = express.Router()
 const db = require('../config/db')
+const bcrypt = require('bcryptjs')  // ✅ import bcrypt
 
+// ====== ของเดิมทั้งหมดที่มึงมี (ไม่แตะ) ======
 // GET all orders (admin)
 router.get('/orders', async (req, res) => {
   try {
@@ -39,18 +41,15 @@ router.patch('/orders/:id', async (req, res) => {
   const { status, tracking_number } = req.body
 
   try {
-    // update orders
     await db.query(`UPDATE orders SET status=? WHERE order_id=?`, [status, id])
-
-    // update or insert deliveries
     const [rows] = await db.query(`SELECT * FROM deliveries WHERE order_id=?`, [id])
+
     if (rows.length > 0) {
       await db.query(
         `UPDATE deliveries SET tracking_number=?, status=? WHERE order_id=?`,
         [tracking_number, status, id]
       )
     } else {
-      // 👉 ดึง address + phone จาก users
       const [userData] = await db.query(`
         SELECT u.address, u.phone
         FROM orders o
@@ -67,7 +66,6 @@ router.patch('/orders/:id', async (req, res) => {
       )
     }
 
-    // auto update payment status ถ้าเป็น paid
     if (status === 'paid') {
       await db.query(`UPDATE payments SET status='paid', paid_at=NOW() WHERE order_id=?`, [id])
     }
@@ -78,5 +76,78 @@ router.patch('/orders/:id', async (req, res) => {
     res.status(500).json({ error: 'Update failed' })
   }
 })
+
+// GET all users (admin)
+router.get('/users', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        user_id, 
+        name, 
+        email, 
+        phone, 
+        address, 
+        role, 
+        created_at, 
+        updated_at
+      FROM users
+      ORDER BY user_id DESC
+    `);
+
+    res.json(rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
+  }
+})
+
+
+// ====== ✅ เพิ่มใหม่: CREATE user พร้อม bcrypt ======
+router.post('/users', async (req, res) => {
+  try {
+    const { name, email, password = '123456', phone, address, role } = req.body
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    const [result] = await db.query(
+      `INSERT INTO users (name, email, password, phone, address, role)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, email, hashedPassword, phone || null, address || null, role || 'customer']
+    )
+
+    res.json({ message: 'เพิ่มผู้ใช้สำเร็จ', user_id: result.insertId })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'เพิ่มผู้ใช้ล้มเหลว' })
+  }
+})
+
+
+// ====== ✅ เพิ่มใหม่: UPDATE user พร้อม bcrypt ======
+router.put('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, email, password, phone, address, role } = req.body
+
+    let sql = `UPDATE users SET name=?, email=?, phone=?, address=?, role=?`
+    const params = [name, email, phone || null, address || null, role || 'customer']
+
+    if (password) {
+      const hashedPassword = await bcrypt.hash(password, 10)
+      sql += `, password=?`
+      params.push(hashedPassword)
+    }
+
+    sql += ` WHERE user_id=?`
+    params.push(id)
+
+    await db.query(sql, params)
+    res.json({ message: 'แก้ไขผู้ใช้สำเร็จ' })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'แก้ไขผู้ใช้ล้มเหลว' })
+  }
+})
+
 
 module.exports = router

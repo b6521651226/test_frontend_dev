@@ -148,6 +148,112 @@ router.put('/users/:id', async (req, res) => {
     res.status(500).json({ error: 'แก้ไขผู้ใช้ล้มเหลว' })
   }
 })
+// ====== Sales Dashboard Stats (append to the end of admin.js) ======
+
+// สรุปยอดรวมแบบเร็ว: วันนี้ / เดือนนี้ / ยอดรวมทั้งหมด (เฉพาะออเดอร์ที่ชำระแล้ว)
+router.get('/stats/summary', async (req, res) => {
+  try {
+    // ใช้ orders.status ในระบบนี้: จ่ายแล้วถือว่า 'paid' หรือ 'done'
+    const paidStatuses = ['paid', 'done'];
+
+    // Today
+    const [todayRows] = await db.query(
+      `
+      SELECT 
+        COALESCE(SUM(total_price),0) AS revenue, 
+        COUNT(*) AS orders
+      FROM orders
+      WHERE status IN (?, ?) AND DATE(created_at) = CURDATE()
+      `,
+      paidStatuses
+    );
+
+    // This month
+    const [monthRows] = await db.query(
+      `
+      SELECT 
+        COALESCE(SUM(total_price),0) AS revenue, 
+        COUNT(*) AS orders
+      FROM orders
+      WHERE status IN (?, ?) 
+        AND YEAR(created_at) = YEAR(CURDATE())
+        AND MONTH(created_at) = MONTH(CURDATE())
+      `,
+      paidStatuses
+    );
+
+    // All time
+    const [allRows] = await db.query(
+      `
+      SELECT 
+        COALESCE(SUM(total_price),0) AS revenue, 
+        COUNT(*) AS orders
+      FROM orders
+      WHERE status IN (?, ?)
+      `,
+      paidStatuses
+    );
+
+    res.json({
+      today: todayRows[0],
+      month: monthRows[0],
+      all: allRows[0],
+    });
+  } catch (err) {
+    console.error('[STATS_SUMMARY]', err);
+    res.status(500).json({ error: 'summary failed' });
+  }
+});
+
+// ยอดรายวันย้อนหลัง N วัน (default 14 วัน)
+router.get('/stats/daily', async (req, res) => {
+  const days = Math.max(1, Math.min(Number(req.query.days) || 14, 90)); // กันยิงหนัก
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT 
+        DATE(created_at) AS day,
+        COUNT(*) AS orders,
+        COALESCE(SUM(total_price),0) AS revenue
+      FROM orders
+      WHERE status IN ('paid', 'done', 'shipping') 
+        AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+      GROUP BY DATE(created_at)
+      ORDER BY day DESC
+      `,
+      [days]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[STATS_DAILY]', err);
+    res.status(500).json({ error: 'daily failed' });
+  }
+});
+
+// ยอดรายเดือนย้อนหลัง N เดือน (default 6 เดือน)
+router.get('/stats/monthly', async (req, res) => {
+  const months = Math.max(1, Math.min(Number(req.query.months) || 6, 24));
+  try {
+    const [rows] = await db.query(
+      `
+      SELECT 
+        DATE_FORMAT(created_at, '%Y-%m') AS ym,
+        COUNT(*) AS orders,
+        COALESCE(SUM(total_price),0) AS revenue
+      FROM orders
+      WHERE status IN ('paid', 'done')
+        AND created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ?-1 MONTH)
+      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      ORDER BY ym DESC
+      `,
+      [months]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[STATS_MONTHLY]', err);
+    res.status(500).json({ error: 'monthly failed' });
+  }
+});
 
 
 module.exports = router

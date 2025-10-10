@@ -1,83 +1,138 @@
-const express = require('express')
-const router = express.Router()
-const db = require('../config/db')
-const bcrypt = require('bcryptjs')  // ✅ import bcrypt
+const express = require('express');
+const router = express.Router();
+const db = require('../config/db');
+const bcrypt = require('bcryptjs'); // ใช้เข้ารหัสรหัสผ่าน
 
-// ====== ของเดิมทั้งหมดที่มึงมี (ไม่แตะ) ======
-// GET all orders (admin)
+// ============ ADMIN ORDERS (หัวออเดอร์ + แนบ items) ============
 router.get('/orders', async (req, res) => {
   try {
-    const [rows] = await db.query(`
-    SELECT 
-    o.order_id,
-    o.user_id,
-    u.name AS username,
-    u.address,
-    u.phone,
-    o.status AS order_status,
-    o.total_price,
-    o.created_at,
-    p.status AS payment_status,
-    p.payment_slip_url,
-    d.status AS delivery_status,
-    d.tracking_number
-    FROM orders o
-    JOIN users u ON o.user_id = u.user_id
-    LEFT JOIN payments p ON o.order_id = p.order_id
-    LEFT JOIN deliveries d ON o.order_id = d.order_id
-    ORDER BY o.created_at DESC
-    `)
+    // 1) ดึงหัวออเดอร์
+    const [orders] = await db.query(`
+      SELECT 
+        o.order_id,
+        o.user_id,
+        u.name AS username,
+        u.address,
+        u.phone,
+        o.status AS order_status,
+        o.total_price,
+        o.created_at,
+        p.status AS payment_status,
+        p.payment_slip_url,
+        d.status AS delivery_status,
+        d.tracking_number
+      FROM orders o
+      JOIN users u ON o.user_id = u.user_id
+      LEFT JOIN payments p ON o.order_id = p.order_id
+      LEFT JOIN deliveries d ON o.order_id = d.order_id
+      ORDER BY o.created_at DESC
+    `);
 
-    res.json(rows)
+    if (!orders.length) return res.json([]);
+
+    // 2) ดึง items ของออเดอร์ทั้งหมด (ไม่อ้าง product_option แล้ว)
+    const orderIds = orders.map(o => o.order_id);
+    const placeholders = orderIds.map(() => '?').join(',');
+    const [items] = await db.query(
+      `
+      SELECT
+        oi.order_id,
+        oi.product_id,
+        oi.quantity,
+        oi.price,
+        p.product_name,
+        p.image_url AS image_url
+      FROM order_items oi
+      JOIN products p ON oi.product_id = p.product_id
+      WHERE oi.order_id IN (${placeholders})
+      ORDER BY oi.order_id ASC
+      `,
+      orderIds
+    );
+
+    // 3) group ตาม order_id
+    const map = items.reduce((acc, it) => {
+      (acc[it.order_id] ||= []).push(it);
+      return acc;
+    }, {});
+
+    // 4) แนบ items เข้าออเดอร์
+    const result = orders.map(o => ({
+      ...o,
+      items: map[o.order_id] || []
+    }));
+
+    res.json(result);
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Database error' })
+    console.error(err);
+    res.status(500).json({ error: 'Database error' });
   }
-})
+});
 
-// PATCH update order status + tracking
+// ============ PATCH: update order status + tracking ============
 router.patch('/orders/:id', async (req, res) => {
-  const { id } = req.params
-  const { status, tracking_number } = req.body
+  const { id } = req.params;
+  const { status, tracking_number } = req.body;
 
   try {
-    await db.query(`UPDATE orders SET status=? WHERE order_id=?`, [status, id])
-    const [rows] = await db.query(`SELECT * FROM deliveries WHERE order_id=?`, [id])
+    // update orders
+    await db.query(`UPDATE orders SET status=? WHERE order_id=?`, [status, id]);
+        // คืนสินค้าเข้าสต็อกถ้ายกเลิก
+    if (status === 'cancel') {
+      const [items] = await db.query(
+        'SELECT product_id, quantity FROM order_items WHERE order_id=?',
+        [id]
+      );
+      for (const item of items) {
+        await db.query(
+          'UPDATE products SET stock = stock + ? WHERE product_id = ?',
+          [item.quantity, item.product_id]
+        );
+      }
+      await db.query(`UPDATE payments SET status='cancel' WHERE order_id=?`, [id]);
 
+    }
+    // update or insert deliveries
+    const [rows] = await db.query(`SELECT * FROM deliveries WHERE order_id=?`, [id]);
     if (rows.length > 0) {
       await db.query(
         `UPDATE deliveries SET tracking_number=?, status=? WHERE order_id=?`,
         [tracking_number, status, id]
-      )
+      );
     } else {
-      const [userData] = await db.query(`
+      const [userData] = await db.query(
+        `
         SELECT u.address, u.phone
         FROM orders o
         JOIN users u ON o.user_id = u.user_id
         WHERE o.order_id = ?
-      `, [id])
+        `,
+        [id]
+      );
 
-      const address = userData[0]?.address || ''
-      const phone   = userData[0]?.phone || ''
+      const address = userData[0]?.address || '';
+      const phone = userData[0]?.phone || '';
 
       await db.query(
-        `INSERT INTO deliveries (order_id, tracking_number, status, address, phone) VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO deliveries (order_id, tracking_number, status, address, phone)
+         VALUES (?, ?, ?, ?, ?)`,
         [id, tracking_number, status, address, phone]
-      )
+      );
     }
 
+    // auto update payment status ถ้าเป็น paid
     if (status === 'paid') {
-      await db.query(`UPDATE payments SET status='paid', paid_at=NOW() WHERE order_id=?`, [id])
+      await db.query(`UPDATE payments SET status='paid', paid_at=NOW() WHERE order_id=?`, [id]);
     }
 
-    res.json({ message: 'อัปเดตเรียบร้อย' })
+    res.json({ message: 'อัปเดตเรียบร้อย' });
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'Update failed' })
+    console.error(err);
+    res.status(500).json({ error: 'Update failed' });
   }
-})
+});
 
-// GET all users (admin)
+// ============ GET all users ============
 router.get('/users', async (req, res) => {
   try {
     const [rows] = await db.query(`
@@ -99,87 +154,94 @@ router.get('/users', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Database error' });
   }
-})
+});
 
-
-// ====== ✅ เพิ่มใหม่: CREATE user พร้อม bcrypt ======
+// ============ CREATE user (bcrypt) ============
 router.post('/users', async (req, res) => {
   try {
-    const { name, email, password = '123456', phone, address, role } = req.body
-
-    const hashedPassword = await bcrypt.hash(password, 10)
+    const { name, email, password = '123456', phone, address, role } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const [result] = await db.query(
       `INSERT INTO users (name, email, password, phone, address, role)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [name, email, hashedPassword, phone || null, address || null, role || 'customer']
-    )
+    );
 
-    res.json({ message: 'เพิ่มผู้ใช้สำเร็จ', user_id: result.insertId })
+    res.json({ message: 'เพิ่มผู้ใช้สำเร็จ', user_id: result.insertId });
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'เพิ่มผู้ใช้ล้มเหลว' })
+    console.error(err);
+    res.status(500).json({ error: 'เพิ่มผู้ใช้ล้มเหลว' });
   }
-})
+});
 
-
-// ====== ✅ เพิ่มใหม่: UPDATE user พร้อม bcrypt ======
+// ============ UPDATE user (bcrypt เมื่อเปลี่ยนรหัส) ============
 router.put('/users/:id', async (req, res) => {
   try {
-    const { id } = req.params
-    const { name, email, password, phone, address, role } = req.body
+    const { id } = req.params;
+    const { name, email, password, phone, address, role } = req.body;
 
-    let sql = `UPDATE users SET name=?, email=?, phone=?, address=?, role=?`
-    const params = [name, email, phone || null, address || null, role || 'customer']
+    let sql = `UPDATE users SET name=?, email=?, phone=?, address=?, role=?`;
+    const params = [name, email, phone || null, address || null, role || 'customer'];
 
     if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10)
-      sql += `, password=?`
-      params.push(hashedPassword)
+      const hashedPassword = await bcrypt.hash(password, 10);
+      sql += `, password=?`;
+      params.push(hashedPassword);
     }
 
-    sql += ` WHERE user_id=?`
-    params.push(id)
+    sql += ` WHERE user_id=?`;
+    params.push(id);
 
-    await db.query(sql, params)
-    res.json({ message: 'แก้ไขผู้ใช้สำเร็จ' })
+    await db.query(sql, params);
+    res.json({ message: 'แก้ไขผู้ใช้สำเร็จ' });
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ error: 'แก้ไขผู้ใช้ล้มเหลว' })
+    console.error(err);
+    res.status(500).json({ error: 'แก้ไขผู้ใช้ล้มเหลว' });
   }
-})
-// ====== Sales Dashboard Stats (append to the end of admin.js) ======
+});
 
-// สรุปยอดรวมแบบเร็ว: วันนี้ / เดือนนี้ / ยอดรวมทั้งหมด (เฉพาะออเดอร์ที่ชำระแล้ว)
+// ====== Sales Dashboard Stats (REVISED) ======
+
+// ใช้สถานะเดียวกันทุก endpoint
+const COUNT_STATUSES = ['paid', 'shipping', 'done'];
+
+/**
+ * Helper: field วันที่ตามเวลาไทย เพื่อความสม่ำเสมอ
+ * - ถ้าคุณตั้ง time_zone เป็น +07:00 แล้วอยู่แล้ว ก็ยังใช้ได้
+ * - ใช้ CONVERT_TZ กันพลาดกรณี session time_zone ไม่ตรง
+ */
+const TH_DATE = "DATE(CONVERT_TZ(created_at, '+00:00', '+07:00'))";
+const TH_MONTH = "DATE_FORMAT(CONVERT_TZ(created_at, '+00:00', '+07:00'), '%Y-%m')";
+
+/** Summary: today / this month / all time */
 router.get('/stats/summary', async (req, res) => {
   try {
-    // ใช้ orders.status ในระบบนี้: จ่ายแล้วถือว่า 'paid' หรือ 'done'
-    const paidStatuses = ['paid', 'done'];
-
-    // Today
+    // Today (เวลาไทย)
     const [todayRows] = await db.query(
       `
       SELECT 
         COALESCE(SUM(total_price),0) AS revenue, 
         COUNT(*) AS orders
       FROM orders
-      WHERE status IN (?, ?) AND DATE(created_at) = CURDATE()
+      WHERE status IN (?, ?, ?)
+        AND ${TH_DATE} = ${TH_DATE.replace('created_at', 'NOW()')}
       `,
-      paidStatuses
+      COUNT_STATUSES
     );
 
-    // This month
+    // This month (เวลาไทย)
     const [monthRows] = await db.query(
       `
       SELECT 
         COALESCE(SUM(total_price),0) AS revenue, 
         COUNT(*) AS orders
       FROM orders
-      WHERE status IN (?, ?) 
-        AND YEAR(created_at) = YEAR(CURDATE())
-        AND MONTH(created_at) = MONTH(CURDATE())
+      WHERE status IN (?, ?, ?)
+        AND DATE_FORMAT(CONVERT_TZ(created_at, '+00:00', '+07:00'), '%Y-%m')
+            = DATE_FORMAT(CONVERT_TZ(NOW(), '+00:00', '+07:00'), '%Y-%m')
       `,
-      paidStatuses
+      COUNT_STATUSES
     );
 
     // All time
@@ -189,9 +251,9 @@ router.get('/stats/summary', async (req, res) => {
         COALESCE(SUM(total_price),0) AS revenue, 
         COUNT(*) AS orders
       FROM orders
-      WHERE status IN (?, ?)
+      WHERE status IN (?, ?, ?)
       `,
-      paidStatuses
+      COUNT_STATUSES
     );
 
     res.json({
@@ -205,23 +267,23 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
-// ยอดรายวันย้อนหลัง N วัน (default 14 วัน)
+/** รายวันย้อนหลัง N วัน (default 14) */
 router.get('/stats/daily', async (req, res) => {
-  const days = Math.max(1, Math.min(Number(req.query.days) || 14, 90)); // กันยิงหนัก
+  const days = Math.max(1, Math.min(Number(req.query.days) || 14, 90));
   try {
     const [rows] = await db.query(
       `
       SELECT 
-        DATE(created_at) AS day,
+        ${TH_DATE} AS day,
         COUNT(*) AS orders,
         COALESCE(SUM(total_price),0) AS revenue
       FROM orders
-      WHERE status IN ('paid', 'done', 'shipping') 
-        AND created_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)
-      GROUP BY DATE(created_at)
+      WHERE status IN (?, ?, ?)
+        AND ${TH_DATE} >= DATE_SUB(${TH_DATE.replace('created_at', 'NOW()')}, INTERVAL ? DAY)
+      GROUP BY ${TH_DATE}
       ORDER BY day DESC
       `,
-      [days]
+      [...COUNT_STATUSES, days]
     );
     res.json(rows);
   } catch (err) {
@@ -230,23 +292,24 @@ router.get('/stats/daily', async (req, res) => {
   }
 });
 
-// ยอดรายเดือนย้อนหลัง N เดือน (default 6 เดือน)
+/** รายเดือนย้อนหลัง N เดือน (default 6) */
 router.get('/stats/monthly', async (req, res) => {
   const months = Math.max(1, Math.min(Number(req.query.months) || 6, 24));
   try {
     const [rows] = await db.query(
       `
       SELECT 
-        DATE_FORMAT(created_at, '%Y-%m') AS ym,
+        ${TH_MONTH} AS ym,
         COUNT(*) AS orders,
         COALESCE(SUM(total_price),0) AS revenue
       FROM orders
-      WHERE status IN ('paid', 'done')
-        AND created_at >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL ?-1 MONTH)
-      GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+      WHERE status IN (?, ?, ?)
+        AND CONVERT_TZ(created_at, '+00:00', '+07:00')
+              >= DATE_SUB(DATE_FORMAT(CONVERT_TZ(NOW(), '+00:00', '+07:00'), '%Y-%m-01'), INTERVAL ?-1 MONTH)
+      GROUP BY ${TH_MONTH}
       ORDER BY ym DESC
       `,
-      [months]
+      [...COUNT_STATUSES, months]
     );
     res.json(rows);
   } catch (err) {
@@ -256,4 +319,4 @@ router.get('/stats/monthly', async (req, res) => {
 });
 
 
-module.exports = router
+module.exports = router;

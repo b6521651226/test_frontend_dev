@@ -1,83 +1,65 @@
 <template>
-  <div class="cart-container">
-    <h2>ตะกร้าสินค้า</h2>
-
-    <div v-if="loading">กำลังโหลด...</div>
-    <div v-else-if="items.length === 0">ไม่มีสินค้าในตะกร้า</div>
-
-    <div
-      v-else
-      v-for="item in items"
-      :key="item.cart_id"
-      class="cart-item"
-    >
-      <!-- ✅ prepend apiBase -->
-      <img :src="apiBase + item.image_url" :alt="item.name" class="cart-image" />
-
-      <div class="cart-info">
-        <p class="name">{{ item.name }}</p>
-        <p>ราคา: {{ format(item.price) }} บาท</p>
-
-        <!-- ตัวเลือกสินค้า -->
-        <div class="row">
-          <label>หมายเหตุ:</label>
-
-          <select
-            v-if="Array.isArray(item.available_options) && item.available_options.length"
-            v-model="item.product_option"
-            @change="updateItem(item.cart_id, { product_option: item.product_option })"
-          >
-            <option
-              v-for="opt in item.available_options"
-              :key="opt"
-              :value="opt"
-            >
-              {{ opt }}
-            </option>
-          </select>
-
-          <input
-            v-else
-            v-model="item.product_option"
-            @change="updateItem(item.cart_id, { product_option: item.product_option })"
-            placeholder="หมายเหตุถึงร้านค้า(ถ้ามี)"
-          />
+  <div class="page">
+    <div class="wrap">
+      <!-- Header -->
+      <header class="head">
+        <div class="title-wrap">
+          <h1>ตะกร้าสินค้า</h1>
+          <p class="sub">ตรวจสอบจำนวน แก้ไข หรือไปชำระเงิน</p>
         </div>
+      </header>
 
-        <!-- จำนวน -->
-        <div class="row">
-          <label>จำนวน:</label>
-          <div class="qty">
-            <button @click="decQty(item)">-</button>
-            <input
-              type="number"
-              min="1"
-              v-model.number="item.quantity"
-              @change="onQtyChange(item)"
-            />
-            <button @click="incQty(item)">+</button>
+      <div v-if="loading" class="empty">กำลังโหลด...</div>
+      <div v-else-if="items.length === 0" class="empty">ไม่มีสินค้าในตะกร้า</div>
+
+      <!-- รายการสินค้าในตะกร้า -->
+      <section v-else class="list">
+        <article
+          v-for="item in items"
+          :key="item.cart_id"
+          class="card cart-card"
+        >
+          <!-- รูป -->
+          <img :src="apiBase + item.image_url" :alt="item.name" class="thumb" />
+
+          <!-- ข้อมูล -->
+          <div class="meta">
+            <div class="name" :title="item.name">{{ item.name }}</div>
+            <div class="price">ราคา: {{ format(item.price) }} ฿</div>
+
+            <!-- จำนวน -->
+            <div class="qty-row">
+              <label>จำนวน</label>
+              <div class="qty">
+                <button class="btn ghost sm" @click="decQty(item)">−</button>
+                <input
+                  type="number"
+                  min="1"
+                  v-model.number="item.quantity"
+                  @change="onQtyChange(item)"
+                />
+                <button class="btn ghost sm" @click="incQty(item)">+</button>
+              </div>
+            </div>
+
+            <div class="line-total">รวมรายการ: <b>{{ format(item.price * item.quantity) }}</b> ฿</div>
+
+            <div class="actions">
+              <button class="btn danger sm" @click="removeItem(item.cart_id)">ลบสินค้า</button>
+            </div>
           </div>
-        </div>
+        </article>
+      </section>
 
-        <p class="line-total">
-          รวมรายการ: {{ format(item.price * item.quantity) }} บาท
-        </p>
-
-        <div class="actions">
-          <button class="danger" @click="removeItem(item.cart_id)">ลบสินค้า</button>
-        </div>
+      <!-- สรุปราคา + ปุ่มไปชำระเงิน -->
+      <div v-if="items.length" class="summary card">
+        <div class="sum-text">ราคารวมทั้งหมด</div>
+        <div class="sum-amt">{{ format(cartTotal) }} ฿</div>
+        <button class="btn primary" @click="$router.push('/checkout')">ชำระเงิน</button>
       </div>
-    </div>
 
-    <div v-if="items.length" class="cart-summary">
-      <div>ราคารวมทั้งหมด: <b>{{ format(cartTotal) }}</b> บาท</div>
+      <p v-if="error" class="error">{{ error }}</p>
     </div>
-    <div v-if="items.length" class="cart-summary">
-      <div>ราคารวมทั้งหมด: <b>{{ format(cartTotal) }}</b> บาท</div>
-      <button class="checkout" @click="$router.push('/checkout')">ชำระเงิน</button>
-    </div>
-
-    <p v-if="error" class="error">{{ error }}</p>
   </div>
 </template>
 
@@ -88,10 +70,11 @@ import api from '../lib/api'
 const items = ref([])
 const loading = ref(false)
 const error = ref('')
-const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:4000'   // ✅ เพิ่ม
+const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
 const format = (n) =>
   Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 const cartTotal = computed(() =>
   items.value.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0)
 )
@@ -163,41 +146,66 @@ async function removeItem(id) {
 }
 </script>
 
-
-
 <style scoped>
-.cart-container { padding: 20px; font-family: 'Kanit', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap');
 
-.cart-item {
-  display: flex; align-items: flex-start;
-  margin-bottom: 16px; border-bottom: 1px solid #ddd; padding-bottom: 12px;
+/* Base layout ให้เข้ากับธีม */
+.page { background:#ffffff; min-height:100vh; }
+.wrap { max-width:1080px; margin:24px auto; padding:0 16px; font-family:'Kanit',sans-serif; }
+
+.head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.title-wrap h1 { margin:0; font-size:24px; font-weight:700; }
+.title-wrap .sub { margin:2px 0 0; color:#6b7280; font-size:14px; }
+
+/* Card / list */
+.list { display:grid; gap:12px; }
+.card{
+  background:#fff; border:1px solid #eee; border-radius:14px;
+  box-shadow:0 6px 16px rgba(0,0,0,.04); padding:12px;
 }
 
-.cart-image { width: 100px; height: 100px; object-fit: contain; margin-right: 16px; }
+/* Cart item card */
+.cart-card{ display:flex; gap:12px; align-items:flex-start; }
+.thumb{
+  width:96px; height:96px; object-fit:cover; border-radius:10px; border:1px solid #eee; background:#fcfcfc;
+}
+.meta{ flex:1; display:grid; gap:8px; }
+.name{ font-weight:700; }
+.price{ color:#111; }
+.line-total{ font-weight:600; }
 
-.cart-info { flex: 1; display: grid; gap: 8px; }
-.cart-info .name { font-weight: 600; }
+.qty-row{ display:flex; align-items:center; gap:10px; }
+.qty{
+  display:inline-flex; gap:8px; align-items:center; background:#fafafa; border:1px solid #e5e7eb; border-radius:10px; padding:4px;
+}
+.qty input{
+  width:70px; text-align:center; padding:8px 6px; border:1px solid #e5e7eb; border-radius:8px; outline:none; background:#fff;
+}
+.qty input:focus{ border-color:#f1c40f; box-shadow:0 0 0 3px rgba(241,196,15,.15); }
 
-.row { display: flex; gap: 10px; align-items: center; }
-.row label { min-width: 70px; color: #555; }
+/* Summary block */
+.summary{
+  display:flex; align-items:center; gap:12px; justify-content:flex-end; margin-top:14px;
+}
+.sum-text{ color:#6b7280; }
+.sum-amt{ font-size:18px; font-weight:700; }
 
-.qty { display: inline-flex; align-items: center; gap: 6px; }
-.qty input { width: 70px; text-align: center; padding: 6px; }
-.qty button { width: 32px; height: 32px; border: 1px solid #ddd; background: #f7f7f7; cursor: pointer; }
+/* Buttons — เข้าธีมเดียวกันทั้งหมด */
+.btn{
+  padding:10px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff;
+  cursor:pointer; font-weight:600; transition:filter .15s, background .15s, color .15s;
+}
+.btn:hover{ filter:brightness(.95); }
+.btn.primary{ background:#f1c40f; border-color:#f1c40f; color:#111827; }
+.btn.ghost{ background:#fff; color:#111827; border-color:#e5e7eb; }
+.btn.ghost:hover{ background:#f9fafb; }
+.btn.danger{ background:#ffe9e9; color:#b40b0b; border-color:#ffd4d4; }
+.btn.sm{ padding:6px 10px; border-radius:8px; }
 
-.line-total { margin-top: 4px; font-weight: 500; }
-
-.actions { margin-top: 6px; }
-button.danger {
-  background: #e53935; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+.empty{
+  background:#fff; border:1px dashed #e5e7eb; border-radius:12px; padding:18px; text-align:center; color:#6b7280;
+  box-shadow:0 6px 16px rgba(0,0,0,.03);
 }
 
-.cart-summary {
-  margin-top: 20px; display: flex; justify-content: space-between; align-items: center;
-  padding-top: 12px; border-top: 2px solid #000;
-}
-
-.checkout { background: #222; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; }
-
-.error { color: #d00; margin-top: 10px; }
+.error { color:#b91c1c; margin-top:12px; }
 </style>

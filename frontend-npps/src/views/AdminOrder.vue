@@ -48,11 +48,8 @@
             <div class="left">
               <span class="code">#{{ o.order_id }}</span>
               <span class="name">{{ o.username }}</span>
-              <span
-                class="badge"
-                :class="badgeClass(o.order_status)"
-                >{{ o.order_status }}</span
-              >
+              <!-- ✅ แสดงเฉพาะสถานะของออเดอร์ -->
+              <span class="badge" :class="badgeClass(o.order_status)">{{ o.order_status }}</span>
             </div>
 
             <div class="right">
@@ -82,10 +79,6 @@
                 <div class="block">
                   <h4>การชำระเงิน</h4>
                   <p>ยอดที่จ่าย: <b>{{ format(o.total_price) }} ฿</b></p>
-                  <p>
-                    สถานะจ่ายเงิน:
-                    <span class="badge soft" :class="payBadge(o.payment_status)">{{ o.payment_status || '-' }}</span>
-                  </p>
                   <div v-if="o.payment_slip_url" class="slip">
                     <p>สลิปโอนเงิน:</p>
                     <img :src="apiBase + o.payment_slip_url" alt="slip" />
@@ -94,34 +87,38 @@
 
                 <div class="block">
                   <h4>การจัดส่ง</h4>
-                  <p>สถานะส่ง:
-                    <span class="badge soft" :class="shipBadge(o.delivery_status)">{{ o.delivery_status || '-' }}</span>
-                  </p>
                   <div class="track">
                     <input
                       v-model="o.tracking_number"
                       placeholder="Tracking number"
                     />
-                    <button class="btn" @click="updateStatus(o)">อัปเดต</button>
+                    
                   </div>
                 </div>
               </div>
 
+              <!-- ✅ บล็อกสินค้า: ดึงจากหน้า Profile มาใช้เหมือนกัน -->
               <div class="items">
                 <h4>สินค้าในออเดอร์</h4>
-                <ul>
-                  <li v-for="it in o.items" :key="it.order_item_id">
-                    <div class="item-left">
-                      <span class="product">{{ it.product_name }}</span>
-                      <small v-if="it.product_option" class="note">({{ it.product_option }})</small>
+                <ul class="items-list">
+                  <li
+                    v-for="it in o.items"
+                    :key="it.order_item_id"
+                    class="item"
+                  >
+                    <img :src="apiBase + it.image_url" alt="" />
+                    <div class="meta">
+                      <div class="name">{{ it.product_name }}</div>
+                      <div class="sub">
+                        x{{ it.quantity }}
+                        <span v-if="it.product_option" class="note">({{ it.product_option }})</span>
+                      </div>
                     </div>
-                    <div class="item-right">
-                      <span class="qty">× {{ it.quantity }}</span>
-                      <span class="line">{{ format(it.price * it.quantity) }} ฿</span>
-                    </div>
+                    <div class="price">{{ format(it.price * it.quantity) }} ฿</div>
                   </li>
                 </ul>
               </div>
+              <!-- /บล็อกสินค้า -->
 
               <div class="actions">
                 <label class="status-select">
@@ -186,7 +183,7 @@ const filteredOrders = computed(() => {
     list = list.filter(o => (o.order_status || '').toLowerCase() === statusFilter.value)
   }
 
-  // ค้นหาจาก order_id / ชื่อ / โทร
+  // ค้นหา order_id / ชื่อ / โทร
   if (search.value.trim()) {
     const q = search.value.trim().toLowerCase()
     list = list.filter(o =>
@@ -195,10 +192,6 @@ const filteredOrders = computed(() => {
       (o.phone || '').toLowerCase().includes(q)
     )
   }
-
-  // ซ่อนที่ยกเลิก? — ผู้ใช้บอก “ยกเว้นออเดอร์ที่ยกเลิก” ในแดชบอร์ด แต่หน้านี้ให้ดูทั้งหมดได้
-  // ถ้าต้องซ่อนจริงให้ปลดคอมเมนต์บรรทัดถัดไป
-  // list = list.filter(o => (o.order_status || '').toLowerCase() !== 'cancel')
 
   return list
 })
@@ -226,7 +219,7 @@ function format(n) {
   return Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })
 }
 
-// แสดงวัน–เวลาเป็นโซนไทย ไม่อิงเวลาบนเครื่องผู้ใช้
+// แสดงวัน–เวลาเป็นโซนไทย
 function formatDate(dt) {
   if (!dt) return '-'
   try {
@@ -244,7 +237,7 @@ function formatDate(dt) {
   }
 }
 
-// สีป้ายสถานะ
+// สีป้ายสถานะออเดอร์
 function badgeClass(status) {
   switch ((status || '').toLowerCase()) {
     case 'pending': return 'warn'
@@ -255,56 +248,29 @@ function badgeClass(status) {
     default: return 'soft'
   }
 }
-function payBadge(s) {
-  return (s || '').toLowerCase() === 'paid' ? 'good' : 'warn'
-}
-function shipBadge(s) {
-  switch ((s || '').toLowerCase()) {
-    case 'preparing': return 'info'
-    case 'shipping': return 'accent'
-    case 'delivered': return 'good'
-    default: return 'soft'
-  }
-}
 </script>
 
 <style scoped>
 /* ---------- Layout ---------- */
-.page { background: #f7f7f8; min-height: 100vh; }
+.page { background: #ffffff; min-height: 100vh; }
 .container { max-width: 1080px; margin: 24px auto; padding: 0 16px; font-family: 'Kanit', sans-serif; }
 
-.header {
-  display: grid; gap: 12px; margin-bottom: 14px;
-}
+.header { display: grid; gap: 12px; margin-bottom: 14px; }
 .title-wrap h1 { margin: 0; font-size: 24px; font-weight: 700; }
 .title-wrap .sub { margin: 2px 0 0; color: #6b7280; font-size: 14px; }
 
 .toolbar {
-  display: flex;
-  gap: 16px; /* เพิ่มจาก 10px → 16px เพื่อให้เว้นระยะมากขึ้น */
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 8px; /* เพิ่มระยะห่างจากหัวข้อด้านบน */
+  display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-top: 8px;
 }
 
-.search {
-  position: relative;
-  flex: 1 1 320px;
-  max-width: 520px;
-  margin-right: 36px; /* ✅ เพิ่ม margin ให้เว้นห่างจาก dropdown */
-}
-.search .icon {
-  position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px;
-}
+.search { position: relative; flex: 1 1 320px; max-width: 520px; margin-right: 36px; }
+.search .icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; }
 .search input {
-  width: 100%; padding: 10px 12px 10px 30px; border: 1px solid #e5e7eb; border-radius: 10px;
-  background: #fff; outline: none;
+  width: 100%; padding: 10px 12px 10px 30px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; outline: none;
 }
 .search input:focus { border-color: #f1c40f; box-shadow: 0 0 0 3px rgba(241,196,15,.15); }
 
-.select {
-  padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
-}
+.select { padding: 10px 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
 
 /* ---------- Cards ---------- */
 .list { display: grid; gap: 12px; }
@@ -312,10 +278,7 @@ function shipBadge(s) {
   border: 1px solid #ececec; background: #fff; border-radius: 14px; overflow: hidden;
   box-shadow: 0 6px 16px rgba(0,0,0,.04);
 }
-.row-head {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px;
-  padding: 14px 16px; cursor: pointer;
-}
+.row-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
 .row-head:hover { background: #fafafa; }
 .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .code { font-weight: 700; color: #111827; }
@@ -328,37 +291,28 @@ function shipBadge(s) {
 
 .details { padding: 0 16px 16px; border-top: 1px dashed #eee; }
 
-.grid {
-  display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-top: 12px;
-}
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 12px; }
 .block { background: #fafafa; border: 1px solid #eee; border-radius: 12px; padding: 12px; }
 .block h4 { margin: 0 0 8px; font-size: 14px; color: #374151; }
 
 .slip img { width: 220px; border-radius: 10px; border: 1px solid #e5e7eb; }
 
+/* ---------- Items (เหมือนหน้า Profile) ---------- */
 .items { margin-top: 14px; }
 .items h4 { margin: 0 0 8px; color: #374151; }
-.items ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.items li {
-  display: flex; justify-content: space-between; align-items: center;
-  background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 8px 10px;
-}
-.item-left { display: flex; gap: 8px; align-items: center; }
-.product { font-weight: 600; }
-.note { color: #6b7280; }
-.item-right { display: flex; gap: 12px; align-items: center; }
-.qty { color: #6b7280; }
-.line { font-weight: 600; }
+.items-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.item { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 8px 10px; }
+.item img { width: 56px; height: 56px; object-fit: cover; border-radius: 10px; border: 1px solid #eee; }
+.item .meta { flex: 1; }
+.item .name { font-weight: 600; }
+.item .sub { color: #777; font-size: 13px; }
+.item .note { color: #999; }
+.item .price { font-weight: 700; }
 
-.actions {
-  display: flex; align-items: center; gap: 10px; margin-top: 16px;
-}
+/* ---------- Actions ---------- */
+.actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 .status-select { display:flex; align-items:center; gap:8px; }
-.status-select select {
-  padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff;
-}
-
+.status-select select { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
 .spacer { flex: 1; }
 
 /* ---------- Badges & Buttons ---------- */
@@ -372,12 +326,8 @@ function shipBadge(s) {
 .badge.good { background:#ecfdf5; color:#047857; border-color:#a7f3d0; }
 .badge.bad { background:#fef2f2; color:#b91c1c; border-color:#fecaca; }
 
-.badge.soft.good { background:#ecfdf5; color:#047857; }
-.badge.soft.warn { background:#fff7ed; color:#9a3412; }
-
 .btn {
-  padding: 8px 12px; border-radius: 10px; border: 1px solid #111827; background: #111827; color: #fff;
-  cursor: pointer;
+  padding: 8px 12px; border-radius: 10px; border: 1px solid #111827; background: #111827; color: #fff; cursor: pointer;
 }
 .btn:hover { filter: brightness(.95); }
 .btn.primary { background: #f1c40f; border-color: #f1c40f; color: #111827; }
@@ -385,10 +335,7 @@ function shipBadge(s) {
 .btn.ghost:hover { background:#f9fafb; }
 
 .track { display:flex; gap:8px; margin-top: 6px; }
-.track input {
-  flex:1; padding: 8px 10px; border:1px solid #e5e7eb; border-radius:10px; outline:none;
-  background:#fff;
-}
+.track input { flex:1; padding: 8px 10px; border:1px solid #e5e7eb; border-radius:10px; outline:none; background:#fff; }
 .track input:focus { border-color:#f1c40f; box-shadow: 0 0 0 3px rgba(241,196,15,.15); }
 
 /* ---------- States ---------- */
@@ -398,10 +345,7 @@ function shipBadge(s) {
 }
 @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:0 0} }
 
-.empty {
-  margin-top: 20px; padding: 20px; text-align: center; color: #6b7280; background: #fff; border:1px dashed #e5e7eb;
-  border-radius: 12px;
-}
+.empty { margin-top: 20px; padding: 20px; text-align: center; color: #6b7280; background: #fff; border:1px dashed #e5e7eb; border-radius: 12px; }
 
 /* ---------- Transitions ---------- */
 .fade-enter-active, .fade-leave-active { transition: opacity .15s ease; }

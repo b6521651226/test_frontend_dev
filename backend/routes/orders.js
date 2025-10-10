@@ -114,4 +114,85 @@ router.get('/my', verifyToken, async (req, res) => {
   }
 });
 
+// PATCH /api/orders/:id/cancel  (ลูกค้ายกเลิกออเดอร์ของตัวเอง)
+router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
+  const uid = req.user.uid;
+  const { id } = req.params;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // 1) ตรวจว่าเป็นออเดอร์ของผู้ใช้นี้ และยังอยู่สถานะ pending เท่านั้น
+    const [rows] = await conn.query(
+      `SELECT order_id, user_id, status 
+       FROM orders 
+       WHERE order_id=? AND user_id=? 
+       FOR UPDATE`,
+      [id, uid]
+    );
+
+    if (!rows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'ไม่พบคำสั่งซื้อ หรือไม่มีสิทธิ์ยกเลิก' });
+    }
+    if (rows[0].status !== 'pending') {
+      await conn.rollback();
+      return res.status(400).json({ message: 'คำสั่งซื้อนี้ไม่สามารถยกเลิกได้' });
+    }
+
+    // 2) ดึง items มาคืนสต็อก
+    const [items] = await conn.query(
+      `SELECT product_id, quantity 
+       FROM order_items 
+       WHERE order_id=?`,
+      [id]
+    );
+
+    for (const it of items) {
+      await conn.query(
+        `UPDATE products 
+         SET stock = stock + ? 
+         WHERE product_id = ?`,
+        [it.quantity, it.product_id]
+      );
+    }
+
+    // 3) อัปเดตสถานะออเดอร์เป็น cancel
+    await conn.query(
+      `UPDATE orders 
+       SET status='cancel', updated_at=NOW() 
+       WHERE order_id=?`,
+      [id]
+    );
+
+    // 4) อัปเดต payment ให้เป็นค่าที่ ENUM รองรับ (หลีกเลี่ยง 'cancelled')
+    // ถ้า schema คุณมีค่า 'cancel' ใน ENUM ให้เปลี่ยนบรรทัดด้านล่างเป็น status='cancel'
+    await conn.query(
+      `UPDATE payments 
+       SET status = IF(status='paid','paid','pending') 
+       WHERE order_id=?`,
+      [id]
+    );
+
+    // (ทางเลือก) mark การขนส่งเป็น cancel ถ้ามี record อยู่
+    await conn.query(
+      `UPDATE deliveries 
+       SET status='cancel' 
+       WHERE order_id=?`,
+      [id]
+    );
+
+    await conn.commit();
+    return res.json({ message: 'ยกเลิกคำสั่งซื้อเรียบร้อย และคืนสต็อกแล้ว' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[CANCEL_ORDER_ERROR]', err);
+    return res.status(500).json({ message: 'ยกเลิกคำสั่งซื้อล้มเหลว' });
+  } finally {
+    conn.release();
+  }
+});
+
+
 module.exports = router;

@@ -1,72 +1,104 @@
 <template>
-  <div>
+  <div class="page">
     <AdminNavbar />
-    <div class="container">
-      <h1>จัดการผู้ใช้</h1>
 
-      <button @click="showAddForm = true" class="btn-add">+ เพิ่มผู้ใช้</button>
+    <div class="wrap">
+      <header class="head">
+        <div class="title-wrap">
+          <h1>จัดการผู้ใช้</h1>
+          <p class="sub">เพิ่ม/แก้ไขสิทธิ์ผู้ใช้ และข้อมูลติดต่อ</p>
+        </div>
+        <button class="btn primary" @click="openAdd">➕ เพิ่มผู้ใช้</button>
+      </header>
 
-      <table class="user-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>ชื่อผู้ใช้</th>
-            <th>อีเมล</th>
-            <th>เบอร์โทร</th>
-            <th>ที่อยู่</th>
-            <th>สิทธิ์</th>
-            <th>การจัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="u in users" :key="u.user_id">
-            <td>{{ u.user_id }}</td>
-            <td>{{ u.name }}</td>
-            <td>{{ u.email }}</td>
-            <td>{{ u.phone }}</td>
-            <td>{{ u.address }}</td>
-            <td>{{ u.role }}</td>
-            <td>
-              <button @click="editUser(u)" class="btn-edit">แก้ไข</button>
-              <button @click="deleteUser(u.user_id)" class="btn-delete">ลบ</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      <section class="card">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width:80px">ID</th>
+              <th>ชื่อผู้ใช้</th>
+              <th>อีเมล</th>
+              <th>เบอร์โทร</th>
+              <th>ที่อยู่</th>
+              <th style="width:120px">สิทธิ์</th>
+              <th style="width:180px">การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="u in users" :key="u.user_id">
+              <td class="muted">#{{ u.user_id }}</td>
+              <td class="strong">{{ u.name }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ u.phone || '-' }}</td>
+              <td class="addr">{{ u.address || '-' }}</td>
+              <td>
+                <span class="badge" :class="u.role === 'admin' ? 'info' : 'soft'">
+                  {{ u.role }}
+                </span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <button class="btn ghost sm" @click="editUser(u)">แก้ไข</button>
+                  <button class="btn danger sm" @click="deleteUser(u.user_id)">ลบ</button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="!users.length">
+              <td colspan="7" class="empty">ยังไม่มีผู้ใช้</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
 
-      <!-- Modal Add/Edit -->
-      <div v-if="showAddForm || editingUser" class="modal">
-        <div class="modal-content">
+    <!-- Modal: Add/Edit -->
+    <div v-if="showAddForm || editingUser" class="modal" @click.self="cancel">
+      <div class="sheet">
+        <div class="sheet-head">
           <h3>{{ editingUser ? 'แก้ไขผู้ใช้' : 'เพิ่มผู้ใช้' }}</h3>
-          <label>ชื่อ-นามสกุล:
-            <input v-model="form.name" required />
+          <button class="btn ghost sm" @click="cancel">ปิด</button>
+        </div>
+
+        <div class="form-grid">
+          <label>ชื่อ-นามสกุล
+            <input v-model.trim="form.name" placeholder="ชื่อจริง นามสกุล" />
           </label>
-          <label>อีเมล:
-            <input v-model="form.email" type="email" required />
+
+          <label>อีเมล
+            <input v-model.trim="form.email" type="email" placeholder="name@example.com" />
           </label>
-          <label>เบอร์โทร:
-            <input v-model="form.phone" />
+
+          <div class="row-2">
+            <label>เบอร์โทร
+              <input v-model.trim="form.phone" placeholder="0812345678" />
+            </label>
+            <label>สิทธิ์
+              <select v-model="form.role">
+                <option value="customer">customer</option>
+                <option value="admin">admin</option>
+              </select>
+            </label>
+          </div>
+
+          <label>ที่อยู่
+            <textarea v-model.trim="form.address" rows="3" placeholder="บ้านเลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์"></textarea>
           </label>
-          <label>ที่อยู่:
-            <textarea v-model="form.address"></textarea>
+
+          <label v-if="!editingUser">รหัสผ่าน
+            <input v-model="form.password" type="password" placeholder="อย่างน้อย 6 ตัวอักษร" />
           </label>
-          <label>สิทธิ์:
-            <select v-model="form.role">
-              <option value="customer">customer</option>
-              <option value="admin">admin</option>
-            </select>
-          </label>
-          <label v-if="!editingUser">รหัสผ่าน:
-            <input v-model="form.password" type="password" placeholder="อย่างน้อย 6 ตัวอักษร" required />
-          </label>
-          <label v-else>รหัสผ่านใหม่ (ถ้าเปลี่ยน):
+          <label v-else>รหัสผ่านใหม่ (ถ้าเปลี่ยน)
             <input v-model="form.password" type="password" placeholder="เว้นว่างไว้ถ้าไม่เปลี่ยน" />
           </label>
 
           <div class="actions">
-            <button @click="saveUser">{{ editingUser ? 'บันทึก' : 'เพิ่ม' }}</button>
-            <button @click="cancel">ยกเลิก</button>
+            <button class="btn primary" @click="saveUser" :disabled="saving">
+              {{ saving ? 'กำลังบันทึก...' : (editingUser ? 'บันทึก' : 'เพิ่ม') }}
+            </button>
+            <button class="btn ghost" @click="cancel" :disabled="saving">ยกเลิก</button>
           </div>
+
+          <p v-if="msg" class="msg">{{ msg }}</p>
         </div>
       </div>
     </div>
@@ -81,6 +113,9 @@ import AdminNavbar from '../components/AdminNavbar.vue'
 const users = ref([])
 const showAddForm = ref(false)
 const editingUser = ref(null)
+const saving = ref(false)
+const msg = ref('')
+
 const form = ref({
   name: '',
   email: '',
@@ -95,36 +130,53 @@ onMounted(loadUsers)
 async function loadUsers() {
   try {
     const { data } = await api.get('/admin/users')
-    users.value = data
+    users.value = data || []
   } catch (err) {
-    console.error('โหลด users ล้มเหลว', err)
+    console.error('[LOAD_USERS]', err)
   }
+}
+
+function openAdd() {
+  showAddForm.value = true
+  editingUser.value = null
+  msg.value = ''
+  form.value = { name: '', email: '', phone: '', address: '', role: 'customer', password: '' }
 }
 
 function editUser(u) {
   editingUser.value = u
+  showAddForm.value = false
+  msg.value = ''
   form.value = { ...u, password: '' }
 }
 
 function cancel() {
-  editingUser.value = null
   showAddForm.value = false
+  editingUser.value = null
+  saving.value = false
+  msg.value = ''
   form.value = { name: '', email: '', phone: '', address: '', role: 'customer', password: '' }
 }
 
 async function saveUser() {
+  msg.value = ''
+  if (!form.value.name?.trim()) return (msg.value = 'กรุณากรอกชื่อ-นามสกุล')
+  if (!form.value.email?.trim()) return (msg.value = 'กรุณากรอกอีเมล')
+
   try {
+    saving.value = true
     if (editingUser.value) {
-      // ✅ PATCH update user (backend จะเช็คถ้ามี password จะ bcrypt)
       await api.put(`/admin/users/${editingUser.value.user_id}`, form.value)
     } else {
-      // ✅ POST create user (backend bcrypt password ตอน insert)
       await api.post('/admin/users', form.value)
     }
     await loadUsers()
     cancel()
   } catch (err) {
-    console.error('บันทึก user ล้มเหลว', err)
+    console.error('[SAVE_USER]', err)
+    msg.value = err?.response?.data?.error || 'บันทึกไม่สำเร็จ'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -134,20 +186,86 @@ async function deleteUser(id) {
     await api.delete(`/admin/users/${id}`)
     await loadUsers()
   } catch (err) {
-    console.error('ลบ user ล้มเหลว', err)
+    console.error('[DELETE_USER]', err)
+    alert('ลบไม่สำเร็จ')
   }
 }
 </script>
 
 <style scoped>
-.container { padding: 20px; font-family: 'Kanit', sans-serif; }
-.user-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-.user-table th, .user-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-.btn-add { margin-bottom: 10px; background: green; color: #fff; padding: 6px 12px; border: none; cursor: pointer; border-radius: 4px; }
-.btn-edit { background: #007bff; color: #fff; padding: 4px 8px; border: none; margin-right: 4px; cursor: pointer; border-radius: 4px; }
-.btn-delete { background: #dc3545; color: #fff; padding: 4px 8px; border: none; cursor: pointer; border-radius: 4px; }
-.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; }
-.modal-content { background: #fff; padding: 20px; border-radius: 6px; width: 400px; }
-.modal-content label { display: block; margin: 8px 0; }
-.actions { margin-top: 10px; display: flex; justify-content: space-between; }
+/* ===== Base / Theme (เหมือน Product/Order/Profile) ===== */
+.page { background:#ffffff; min-height:100vh; }
+.wrap { max-width:1080px; margin:24px auto; padding:0 16px; font-family:'Kanit',sans-serif; }
+
+.head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.title-wrap h1 { margin:0; font-size:24px; font-weight:700; }
+.title-wrap .sub { margin:2px 0 0; color:#6b7280; font-size:14px; }
+
+/* Card/Table */
+.card {
+  background:#fff; border:1px solid #eee; border-radius:14px;
+  box-shadow:0 6px 16px rgba(0,0,0,.04); overflow:hidden;
+}
+.table { width:100%; border-collapse:collapse; }
+.table thead th {
+  text-align:left; font-weight:600; background:#fcfcfc;
+  border-bottom:1px solid #eee; padding:12px 14px;
+}
+.table tbody td { padding:12px 14px; border-bottom:1px solid #f3f3f3; vertical-align:top; }
+.empty { color:#6b7280; text-align:center; padding:16px 0; }
+.strong { font-weight:700; }
+.muted { color:#6b7280; }
+.addr { max-width:360px; white-space:pre-wrap; }
+
+/* Buttons */
+.btn {
+  padding:8px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff; cursor:pointer;
+  transition: filter .15s, background .15s, color .15s; font-weight:600;
+}
+.btn:hover { filter:brightness(.95); }
+.btn.primary { background:#f1c40f; border-color:#f1c40f; color:#111827; }
+.btn.ghost { background:#fff; color:#111827; border-color:#e5e7eb; }
+.btn.ghost:hover { background:#f9fafb; }
+.btn.danger { background:#ffe9e9; color:#b40b0b; border-color:#ffd4d4; }
+.btn.sm { padding:6px 10px; border-radius:8px; font-size:13px; }
+.row-actions { display:flex; gap:8px; }
+
+/* Badges */
+.badge {
+  font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid transparent;
+  text-transform:lowercase; font-weight:700;
+}
+.badge.info { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
+.badge.soft { background:#f3f4f6; color:#374151; }
+
+/* Modal / Sheet */
+.modal {
+  position:fixed; inset:0; background:rgba(0,0,0,.35);
+  display:flex; align-items:center; justify-content:center; padding:16px; z-index:50;
+}
+.sheet {
+  width:min(720px,100%); background:#fff; border-radius:16px; border:1px solid #eee;
+  box-shadow:0 10px 30px rgba(0,0,0,.08); padding:16px;
+}
+.sheet-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.sheet-head h3 { margin:0; font-size:18px; font-weight:700; }
+
+/* Form */
+.form-grid { display:grid; gap:10px; }
+.form-grid label { display:grid; gap:6px; font-weight:600; }
+
+.form-grid input,
+.form-grid textarea,
+.form-grid select {
+  padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; outline:none; background:#fff;
+}
+.form-grid input:focus,
+.form-grid textarea:focus,
+.form-grid select:focus {
+  border-color:#f1c40f; box-shadow:0 0 0 3px rgba(241,196,15,.15);
+}
+.row-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+.actions { display:flex; gap:10px; margin-top:6px; }
+.msg { color:#b40b0b; margin-top:4px; }
 </style>

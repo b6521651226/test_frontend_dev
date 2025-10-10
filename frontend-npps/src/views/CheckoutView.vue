@@ -1,65 +1,86 @@
 <template>
-  <div class="checkout-container">
-    <h2>ชำระเงิน</h2>
-
-    <div v-if="loading">กำลังโหลดตะกร้า...</div>
-    <div v-else-if="items.length === 0">ไม่มีสินค้าในตะกร้า</div>
-
-    <div v-else class="grid">
-      <div class="left">
-        <h3>ข้อมูลจัดส่ง</h3>
-        <div class="form">
-          <label>ชื่อ-นามสกุล
-            <input v-model="shipping.fullname" placeholder="ชื่อผู้รับ" />
-          </label>
-          <label>เบอร์โทร
-            <input v-model="shipping.phone" placeholder="0812345678" />
-          </label>
-          <label>ที่อยู่
-            <textarea v-model="shipping.address" placeholder="บ้านเลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์"></textarea>
-          </label>
-          <label>หมายเหตุ (ถ้ามี)
-            <input v-model="shipping.note" placeholder="ฝากของไว้กับ รปภ. / ส่งช่วงเย็น ฯลฯ" />
-          </label>
+  <div class="page">
+    <div class="wrap checkout">
+      <!-- Header -->
+      <header class="head">
+        <div class="title-wrap">
+          <h1>ชำระเงิน</h1>
+          <p class="sub">กรอกข้อมูลจัดส่ง อัปโหลดสลิป และยืนยันคำสั่งซื้อ</p>
         </div>
+      </header>
 
-        <h3>ชำระเงินโดยโอนบัญชี</h3>
-        <div class="paybox">
-          <p>โอนเข้าบัญชี: <b>ธนาคารกรุงไทย 678-514-5597</b> ชื่อบัญชี <b>อังกูล เณรรักษา</b></p>
-          <label>อัปโหลดสลิปโอนเงิน (jpg/png)
-            <input type="file" accept="image/*" @change="onSlipChange" />
-          </label>
-        </div>
+      <div v-if="loading" class="empty">กำลังโหลดตะกร้า...</div>
+      <div v-else-if="items.length === 0" class="empty">ไม่มีสินค้าในตะกร้า</div>
 
-        <button class="place" :disabled="placing" @click="placeOrder">
-          {{ placing ? 'กำลังส่งคำสั่งซื้อ...' : 'ยืนยันสั่งซื้อ' }}
-        </button>
-        <p v-if="error" class="error">{{ error }}</p>
-      </div>
-
-      <div class="right">
-        <h3>สรุปรายการ</h3>
-        <div class="items">
-          <!-- ✅ ใช้ cart_id เป็น key -->
-          <div class="row" v-for="it in items" :key="it.cart_id">
-            <div class="name">
-              <div>{{ it.name }}</div>
-              <small v-if="it.product_option">ตัวเลือก: {{ it.product_option }}</small>
-              <small>× {{ it.quantity }}</small>
+      <section v-else class="grid">
+        <!--ซ้าย: ข้อมูลจัดส่ง + ชำระเงิน-->
+        <div class="left">
+          <div class="card">
+            <h3 class="card-title">ข้อมูลจัดส่ง</h3>
+            <div class="form">
+              <label>ชื่อ-นามสกุล
+                <input v-model="shipping.fullname" placeholder="ชื่อผู้รับ" />
+              </label>
+              <label>เบอร์โทร
+                <input v-model="shipping.phone" placeholder="0812345678" />
+              </label>
+              <label>ที่อยู่
+                <textarea v-model="shipping.address" rows="4" placeholder="บ้านเลขที่ / ถนน / ตำบล / อำเภอ / จังหวัด / รหัสไปรษณีย์"></textarea>
+              </label>
             </div>
-            <div class="money">{{ format(it.price * it.quantity) }} ฿</div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">ชำระเงินโดยโอนบัญชี</h3>
+            <div class="paybox">
+              <p>โอนเข้าบัญชี: <b>ธนาคารกรุงไทย 678-514-5597</b> ชื่อบัญชี <b>อังกูล เณรรักษา</b></p>
+              <label class="file">
+                อัปโหลดสลิปโอนเงิน (jpg/png)
+                <input type="file" accept="image/*" @change="onSlipChange" />
+              </label>
+            </div>
+
+            <button class="btn primary mt" :disabled="placing" @click="placeOrder">
+              {{ placing ? 'กำลังส่งคำสั่งซื้อ...' : 'ยืนยันสั่งซื้อ' }}
+            </button>
+            <p v-if="error" class="error">{{ error }}</p>
           </div>
         </div>
-        <div class="total">
-          ราคารวม: <b>{{ format(cartTotal) }} ฿</b>
+
+        <!--ขวา: สรุปรายการสินค้า-->
+        <aside class="right">
+          <div class="card">
+            <h3 class="card-title">สรุปรายการ</h3>
+
+            <ul class="items">
+              <li v-for="it in items" :key="it.cart_id" class="item">
+                <div class="meta">
+                  <div class="name" :title="it.name">{{ it.name }}</div>
+                  <div class="sub">
+                    <span v-if="it.product_option" class="note">ตัวเลือก: {{ it.product_option }}</span>
+                    <span class="qty">× {{ it.quantity }}</span>
+                  </div>
+                </div>
+                <div class="price">{{ format(it.price * it.quantity) }} ฿</div>
+              </li>
+            </ul>
+
+            <div class="total">
+              <span>ราคารวมทั้งหมด</span>
+              <b>{{ format(cartTotal) }} ฿</b>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <!-- Success Modal -->
+      <div v-if="success.order_code" class="success">
+        <div class="success-card">
+          <h3>สั่งซื้อสำเร็จ!</h3>
+          <p>เลขที่คำสั่งซื้อ: <b>{{ success.order_code }}</b></p>
+          <button class="btn primary" @click="$router.push('/')">กลับหน้าแรก</button>
         </div>
       </div>
-    </div>
-
-    <div v-if="success.order_code" class="success">
-      <h3>สั่งซื้อสำเร็จ!</h3>
-      <p>เลขที่คำสั่งซื้อ: <b>{{ success.order_code }}</b></p>
-      <button @click="$router.push('/')">กลับหน้าแรก</button>
     </div>
   </div>
 </template>
@@ -82,7 +103,9 @@ const shipping = ref({
   note: ''
 })
 
-const format = (n) => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const format = (n) =>
+  Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
 const cartTotal = computed(() =>
   items.value.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0)
 )
@@ -140,7 +163,6 @@ async function placeOrder() {
     fd.append('note', shipping.value.note || '')
     fd.append('payment_method', 'BANK_TRANSFER')
 
-    // ✅ ใช้ product_id จริง
     const payloadItems = items.value.map(it => ({
       product_id: it.product_id,
       quantity: it.quantity,
@@ -154,7 +176,6 @@ async function placeOrder() {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
-    // ✅ เคลียร์ตะกร้า
     try {
       await api.delete('/cart/clear')
     } catch {
@@ -175,20 +196,86 @@ async function placeOrder() {
 </script>
 
 <style scoped>
-.checkout-container { padding: 20px; font-family: 'Kanit', sans-serif; }
-.grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px; align-items: start; }
-.left .form { display: grid; gap: 10px; }
-.form label { display: grid; gap: 6px; }
-.form input, .form textarea { padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
-.paybox { padding: 12px; border: 1px dashed #bbb; border-radius: 10px; margin-top: 8px; }
-.qr { width: 180px; margin-top: 6px; }
-.place { margin-top: 14px; background: #222; color: #fff; border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; }
-.error { color: #d00; margin-top: 10px; }
-.right .items { border: 1px solid #eee; border-radius: 8px; padding: 10px; }
-.row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-.row:last-child { border-bottom: none; }
-.name { display: grid; }
-.total { margin-top: 10px; font-size: 18px; display: flex; justify-content: space-between; }
-.success { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: grid; place-items: center; }
-.success > div, .success h3, .success p, .success button { background: #fff; padding: 16px; border-radius: 10px; }
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap');
+
+.page { background:#ffffff; min-height:100vh; }
+.wrap { max-width:1080px; margin:24px auto; padding:0 16px; font-family:'Kanit',sans-serif; }
+
+.head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
+.title-wrap h1 { margin:0; font-size:24px; font-weight:700; }
+.title-wrap .sub { margin:2px 0 0; color:#6b7280; font-size:14px; }
+
+.grid {
+  display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px; align-items:start;
+}
+@media (max-width: 960px) {
+  .grid { grid-template-columns: 1fr; }
+}
+
+.card {
+  background:#fff; border:1px solid #eee; border-radius:14px;
+  box-shadow:0 6px 16px rgba(0,0,0,.04); padding:16px;
+}
+.card-title { margin:0 0 10px; font-size:16px; font-weight:700; }
+
+.form { display:grid; gap:10px; }
+.form label { display:grid; gap:6px; font-size:14px; }
+.form input, .form textarea {
+  padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; outline:none; background:#fff;
+  transition:border .15s, box-shadow .15s;
+}
+.form input:focus, .form textarea:focus {
+  border-color:#f1c40f; box-shadow:0 0 0 3px rgba(241,196,15,.15);
+}
+
+.paybox {
+  background:#fafafa; border:1px dashed #d9d9d9; border-radius:12px; padding:12px;
+}
+.paybox .file input[type="file"] { margin-top:6px; }
+.mt { margin-top:12px; }
+
+.items { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+.item {
+  display:flex; justify-content:space-between; align-items:flex-start;
+  background:#fff; border:1px solid #eee; border-radius:10px; padding:10px 12px;
+}
+.item .meta { display:grid; gap:2px; }
+.name { font-weight:700; }
+.sub { color:#6b7280; font-size:13px; display:flex; gap:8px; align-items:center; }
+.note { color:#9ca3af; }
+.qty { color:#6b7280; }
+.price { font-weight:700; }
+
+.total {
+  margin-top:12px; padding-top:12px; border-top:1px dashed #eee;
+  display:flex; align-items:center; justify-content:space-between; font-size:16px;
+}
+
+/* Buttons (ธีมเดียวกับหน้าอื่น) */
+.btn{
+  padding:10px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff;
+  cursor:pointer; font-weight:600; transition:filter .15s, background .15s, color .15s;
+}
+.btn:hover{ filter:brightness(.95); }
+.btn.primary{ background:#f1c40f; border-color:#f1c40f; color:#111827; }
+.btn.ghost{ background:#fff; color:#111827; border-color:#e5e7eb; }
+.btn.ghost:hover{ background:#f9fafb; }
+
+.empty{
+  background:#fff; border:1px dashed #e5e7eb; border-radius:12px; padding:18px; text-align:center; color:#6b7280;
+  box-shadow:0 6px 16px rgba(0,0,0,.03);
+}
+
+.error { color:#b91c1c; margin-top:10px; }
+
+/* Success modal */
+.success {
+  position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.4); z-index:50;
+}
+.success-card {
+  background:#fff; border-radius:14px; padding:18px; width:min(420px, 92vw);
+  box-shadow:0 12px 28px rgba(0,0,0,.16); text-align:center;
+}
+.success-card h3 { margin:0 0 8px; }
+.success-card p { margin:0 0 12px; }
 </style>

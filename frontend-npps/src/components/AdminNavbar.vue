@@ -22,7 +22,7 @@ function doLogout() {
       <router-link to="/admin/product">จัดการสินค้า</router-link>
       <router-link to="/admin/order">จัดการออเดอร์</router-link>
       <router-link to="/admin/user">จัดการผู้ใช้</router-link>
-      <router-link to="/admin/report">รายงาน</router-link>
+      
     </nav>
 
     <div class="auth">

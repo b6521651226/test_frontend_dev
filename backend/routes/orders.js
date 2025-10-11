@@ -66,6 +66,44 @@ router.post('/', verifyToken, upload.single('slip'), async (req, res) => {
       'INSERT INTO payments (order_id, payment_slip_url, status) VALUES (?, ?, ?)',
       [orderId, slipUrl, 'pending']
     );
+    // =============================
+// ✅ สร้าง QR PromptPay สำหรับออเดอร์นี้
+// =============================
+const path = require('path');
+const qrcode = require('qrcode');
+const generatePayload = require('promptpay-qr');
+const PROMPTPAY_ID = process.env.PROMPTPAY_ID;
+
+try {
+  // gen payload จากยอด total
+  const amount = Number(total.toFixed(2));
+  const billRef = `ORD-${orderId}`;
+
+  const payload = generatePayload(PROMPTPAY_ID, { amount });
+  const qrRelPath = `/uploads/qr/ord_${orderId}.png`;
+  const qrAbsPath = path.join(__dirname, '..', 'public', qrRelPath);
+
+  // ✅ สร้างโฟลเดอร์ public/uploads/qr/ ถ้ายังไม่มี
+  const fs = require('fs');
+  const qrDir = path.dirname(qrAbsPath);
+  if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
+  // ✅ สร้างไฟล์ QR
+  await qrcode.toFile(qrAbsPath, payload, { margin: 1, width: 360 });
+
+  // ✅ อัปเดตข้อมูลใน payments
+  await conn.query(
+    `UPDATE payments
+     SET amount_expected=?, qr_payload=?, qr_image_url=?, bill_ref=?
+     WHERE order_id=?`,
+    [amount, payload, qrRelPath, billRef, orderId]
+  );
+
+  console.log(`✅ QR พร้อมเพย์ถูกสร้างแล้ว -> ${qrRelPath}`);
+} catch (err) {
+  console.error('[QR_ERROR]', err);
+}
+
 
     await conn.commit();
     res.status(201).json({ message: 'สร้างออเดอร์แล้ว', orderId, total, slip: slipUrl });

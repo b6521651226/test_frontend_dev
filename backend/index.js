@@ -1,8 +1,16 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');   // ✅ import path
 
 const app = express();
+
+app.use(cors({
+  origin: ['http://localhost:5173'],   // frontend ที่อนุญาต
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
 
 const orderRoutes = require('./routes/orders');
 const uploadRoutes = require('./routes/uploads')
@@ -13,8 +21,12 @@ const productRoutes = require('./routes/products');
 const uploadMiddleware = require('./middlewares/upload'); // ✅ ใช้ multer สำหรับอัปโหลดไฟล์
 const adminRoutes = require('./routes/admin');
 const { verifyToken } = require('./middlewares/auth');
+const verifySlipRoute = require('./routes/verifySlip');
+console.log("PromptPay ID:", process.env.PROMPTPAY_ID);
+app.use('/api/payments', verifySlipRoute);
+app.use('/api/payments', require('./routes/payments'));
 
-app.use(cors());
+app.use('/uploads', express.static('public/uploads'));
 app.use(express.json());
 app.use('/api/admin', verifyToken, adminRoutes);
 // auth

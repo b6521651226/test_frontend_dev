@@ -5,15 +5,15 @@
       <header class="head">
         <div class="title-wrap">
           <h1>ชำระเงิน</h1>
-          <p class="sub">กรอกข้อมูลจัดส่ง อัปโหลดสลิป และยืนยันคำสั่งซื้อ</p>
+          <p class="sub">กรอกข้อมูลจัดส่ง สร้างออเดอร์เพื่อขอ QR จากนั้นอัปโหลดสลิปและยืนยัน</p>
         </div>
       </header>
 
       <div v-if="loading" class="empty">กำลังโหลดตะกร้า...</div>
-      <div v-else-if="items.length === 0" class="empty">ไม่มีสินค้าในตะกร้า</div>
+      <div v-else-if="items.length === 0 && !orderId" class="empty">ไม่มีสินค้าในตะกร้า</div>
 
       <section v-else class="grid">
-        <!--ซ้าย: ข้อมูลจัดส่ง + ชำระเงิน-->
+        <!-- ซ้าย: ข้อมูลจัดส่ง + ชำระเงิน -->
         <div class="left">
           <div class="card">
             <h3 class="card-title">ข้อมูลจัดส่ง</h3>
@@ -33,22 +33,45 @@
           <div class="card">
             <h3 class="card-title">ชำระเงินโดยโอนบัญชี</h3>
             <div class="paybox">
-              <p>โอนเข้าบัญชี: <b>ธนาคารกรุงไทย 678-514-5597</b> ชื่อบัญชี <b>อังกูล เณรรักษา</b></p>
+              <p>โอนเข้าบัญชี: <b>พร้อมเพย์ 080-179-2785</b> ชื่อบัญชี <b>อังกูล เณรรักษา</b></p>
+
+              <!-- ✅ แสดง QR หลังสร้างออเดอร์สำเร็จ -->
+              <div v-if="qrUrl" class="qr-section">
+                <p><b>สแกน QR ด้านล่างเพื่อชำระเงิน</b></p>
+                <img :src="qrUrl" alt="QR PromptPay" class="qr-img" />
+                <p class="hint">เมื่อโอนเสร็จให้อัปโหลดสลิปเพื่อยืนยันการชำระเงิน</p>
+              </div>
+
               <label class="file">
                 อัปโหลดสลิปโอนเงิน (jpg/png)
                 <input type="file" accept="image/*" @change="onSlipChange" />
               </label>
             </div>
 
-            <button class="btn primary mt" :disabled="placing" @click="placeOrder">
-              {{ placing ? 'กำลังส่งคำสั่งซื้อ...' : 'ยืนยันสั่งซื้อ' }}
+            <!-- 🔘 ปุ่มที่ 1: สร้างออเดอร์ / ขอ QR (ไม่ต้องมีสลิป) -->
+            <button
+              class="btn primary mt"
+              :disabled="placing || !canCreateOrder"
+              @click="createOrderAndFetchQR"
+            >
+              {{ placing && !orderId ? 'กำลังสร้างคำสั่งซื้อ...' : 'สร้างออเดอร์ / ขอ QR' }}
             </button>
+
+            <!-- 🔘 ปุ่มที่ 2: อัปโหลดสลิป & ยืนยันชำระเงิน (ต้องมี orderId และสลิป) -->
+            <button
+              class="btn mt"
+              :disabled="placing || !orderId || !slipFile"
+              @click="uploadSlipAndVerify"
+            >
+              {{ placing && orderId ? 'กำลังยืนยันการชำระเงิน...' : 'อัปโหลดสลิป & ยืนยันชำระเงิน' }}
+            </button>
+
             <p v-if="error" class="error">{{ error }}</p>
           </div>
         </div>
 
-        <!--ขวา: สรุปรายการสินค้า-->
-        <aside class="right">
+        <!-- ขวา: สรุปรายการสินค้า (แสดงเฉพาะตอนยังไม่เคลียร์ตะกร้า) -->
+        <aside class="right" v-if="items.length">
           <div class="card">
             <h3 class="card-title">สรุปรายการ</h3>
 
@@ -73,12 +96,20 @@
         </aside>
       </section>
 
-      <!-- Success Modal -->
-      <div v-if="success.order_code" class="success">
+      <!-- Success Modal (โชว์หลัง verify สลิปผ่าน) -->
+      <div
+        v-if="success.order_code"
+        class="success"
+        @click.self="closeSuccess"
+      >
         <div class="success-card">
+          <button class="close-x" @click="closeSuccess" aria-label="close">×</button>
           <h3>สั่งซื้อสำเร็จ!</h3>
           <p>เลขที่คำสั่งซื้อ: <b>{{ success.order_code }}</b></p>
-          <button class="btn primary" @click="$router.push('/')">กลับหน้าแรก</button>
+          <div class="actions">
+            <button class="btn ghost" @click="closeSuccess">ปิด</button>
+            <button class="btn primary" @click="$router.push('/')">กลับหน้าแรก</button>
+          </div>
         </div>
       </div>
     </div>
@@ -96,6 +127,9 @@ const error = ref('')
 const success = ref({ order_code: '' })
 const slipFile = ref(null)
 
+const qrUrl = ref('')          // ✅ รูป QR จาก backend
+const orderId = ref(null)      // ✅ เก็บ orderId ที่เพิ่งสร้าง
+
 const shipping = ref({
   fullname: '',
   phone: '',
@@ -108,6 +142,10 @@ const format = (n) =>
 
 const cartTotal = computed(() =>
   items.value.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0)
+)
+
+const canCreateOrder = computed(() =>
+  (!!items.value.length) && !!shipping.value.phone && !!shipping.value.address
 )
 
 onMounted(async () => {
@@ -143,19 +181,24 @@ function onSlipChange(e) {
   if (f) slipFile.value = f
 }
 
-async function placeOrder() {
+/* ============================
+   ปุ่มที่ 1: สร้างออเดอร์ / ขอ QR (ไม่บังคับสลิป)
+   ============================ */
+async function createOrderAndFetchQR() {
   error.value = ''
-  if (!items.value.length) return (error.value = 'ไม่มีสินค้าในตะกร้า')
-  if (!shipping.value.phone || !shipping.value.address) return (error.value = 'กรอกข้อมูลจัดส่งให้ครบก่อน')
-  if (!slipFile.value) return (error.value = 'กรุณาอัปโหลดสลิปการโอนเงิน')
+  if (!canCreateOrder.value) {
+    return (error.value = 'กรอกข้อมูลจัดส่งให้ครบและตรวจสอบตะกร้า')
+  }
 
   placing.value = true
   try {
+    // อัปเดตที่อยู่ก่อน (ของเดิม)
     await api.patch('/users/me', {
       phone: shipping.value.phone,
       address: shipping.value.address
     })
 
+    // เตรียม payload ออเดอร์ (ไม่แนบสลิปในขั้นนี้)
     const fd = new FormData()
     fd.append('shipping_fullname', shipping.value.fullname)
     fd.append('shipping_phone', shipping.value.phone)
@@ -170,12 +213,28 @@ async function placeOrder() {
     }))
     fd.append('items', JSON.stringify(payloadItems))
     fd.append('total_client', String(cartTotal.value))
-    fd.append('slip', slipFile.value)
+    // ❌ ไม่แนบ 'slip' ที่นี่
 
     const { data } = await api.post('/orders', fd, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
 
+    // เก็บ orderId ไว้ใช้ขั้น verify + ดึง QR
+    if (data?.orderId) {
+      orderId.value = data.orderId
+      try {
+        const res = await api.get(`/payments/by-order/${data.orderId}`)
+        qrUrl.value = res.data?.qr_image_url
+          ? (res.data.qr_image_url.startsWith('http')
+              ? res.data.qr_image_url
+              : `${api.defaults.baseURL}${res.data.qr_image_url}`)
+          : ''
+      } catch (e) {
+        console.warn('โหลด QR ไม่สำเร็จ', e)
+      }
+    }
+
+    // เคลียร์ตะกร้าเหมือนเดิม (ป้องกันกดสร้างซ้ำ)
     try {
       await api.delete('/cart/clear')
     } catch {
@@ -183,15 +242,53 @@ async function placeOrder() {
         try { await api.delete(`/cart/${it.cart_id}`) } catch {}
       }
     }
-
-    success.value.order_code = data?.order_code || ''
     items.value = []
   } catch (e) {
     console.error(e)
-    error.value = e?.response?.data?.message || 'สั่งซื้อไม่สำเร็จ'
+    error.value = e?.response?.data?.message || 'สร้างคำสั่งซื้อไม่สำเร็จ'
   } finally {
     placing.value = false
   }
+}
+
+/* ============================
+   ปุ่มที่ 2: อัปโหลดสลิป & ขอ verify (รองรับทั้ง path และ query)
+   ============================ */
+async function uploadSlipAndVerify() {
+  error.value = ''
+  if (!orderId.value) return (error.value = 'ยังไม่มีคำสั่งซื้อ กรุณากด "สร้างออเดอร์ / ขอ QR" ก่อน')
+  if (!slipFile.value) return (error.value = 'กรุณาอัปโหลดสลิปการโอนเงิน')
+
+  placing.value = true
+  try {
+    const fd = new FormData()
+    fd.append('slip', slipFile.value)
+
+    // พยายามแบบ path param ก่อน
+    try {
+      await api.post(`/payments/verify-slip/${orderId.value}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    } catch (_e) {
+      // ถ้า backend ใช้แบบ query ก็ลองแบบนี้แทน
+      await api.post(`/payments/verify-slip?order_id=${orderId.value}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    }
+
+    // verify ผ่าน -> โชว์ modal
+    success.value.order_code = String(orderId.value)
+  } catch (e) {
+    console.error(e)
+    error.value = e?.response?.data?.message || 'ยืนยันการชำระเงินไม่สำเร็จ'
+  } finally {
+    placing.value = false
+  }
+}
+
+/* === ปิดโมดัลสำเร็จ === */
+function closeSuccess() {
+  success.value = { order_code: '' }
 }
 </script>
 
@@ -205,12 +302,8 @@ async function placeOrder() {
 .title-wrap h1 { margin:0; font-size:24px; font-weight:700; }
 .title-wrap .sub { margin:2px 0 0; color:#6b7280; font-size:14px; }
 
-.grid {
-  display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px; align-items:start;
-}
-@media (max-width: 960px) {
-  .grid { grid-template-columns: 1fr; }
-}
+.grid { display:grid; grid-template-columns:1.2fr 0.8fr; gap:16px; align-items:start; }
+@media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
 
 .card {
   background:#fff; border:1px solid #eee; border-radius:14px;
@@ -234,9 +327,12 @@ async function placeOrder() {
 .paybox .file input[type="file"] { margin-top:6px; }
 .mt { margin-top:12px; }
 
+.qr-section, .qr-modal { margin-top:10px; text-align:center; }
+.qr-img { width:220px; height:220px; object-fit:contain; border:1px solid #eee; border-radius:12px; margin-top:6px; }
+.hint { color:#6b7280; font-size:12px; margin-top:4px; }
+
 .items { list-style:none; margin:0; padding:0; display:grid; gap:10px; }
-.item {
-  display:flex; justify-content:space-between; align-items:flex-start;
+.item { display:flex; justify-content:space-between; align-items:flex-start;
   background:#fff; border:1px solid #eee; border-radius:10px; padding:10px 12px;
 }
 .item .meta { display:grid; gap:2px; }
@@ -251,9 +347,7 @@ async function placeOrder() {
   display:flex; align-items:center; justify-content:space-between; font-size:16px;
 }
 
-/* Buttons (ธีมเดียวกับหน้าอื่น) */
-.btn{
-  padding:10px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff;
+.btn{ padding:10px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff;
   cursor:pointer; font-weight:600; transition:filter .15s, background .15s, color .15s;
 }
 .btn:hover{ filter:brightness(.95); }
@@ -269,13 +363,17 @@ async function placeOrder() {
 .error { color:#b91c1c; margin-top:10px; }
 
 /* Success modal */
-.success {
-  position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.4); z-index:50;
-}
+.success { position:fixed; inset:0; display:grid; place-items:center; background:rgba(0,0,0,.4); z-index:50; }
 .success-card {
+  position: relative;
   background:#fff; border-radius:14px; padding:18px; width:min(420px, 92vw);
   box-shadow:0 12px 28px rgba(0,0,0,.16); text-align:center;
 }
 .success-card h3 { margin:0 0 8px; }
 .success-card p { margin:0 0 12px; }
+.close-x{
+  position:absolute; right:10px; top:8px;
+  background:transparent; border:none; font-size:20px; cursor:pointer; line-height:1;
+}
+.actions{ display:flex; gap:8px; justify-content:center; }
 </style>

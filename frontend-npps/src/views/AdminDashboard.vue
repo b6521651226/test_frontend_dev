@@ -144,11 +144,24 @@ function formatCurrency(n) {
   const num = Number(n || 0)
   return num.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ฿'
 }
+
+// ✅ แก้ให้ตีความวันจาก DB เป็นเวลาไทยเสถียร (กันวันเพี้ยน)
+// - ถ้าได้ 'YYYY-MM-DD' -> สร้างเป็น 'YYYY-MM-DDT00:00:00+07:00'
+// - ถ้าได้ ISO ที่มี 'T' อยู่แล้ว -> ใช้ตามนั้น แต่แสดงใน timeZone ไทย
 function formatDate(d) {
+  if (!d) return '-'
   try {
-    return new Date(d).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })
+    const s = String(d)
+    const iso = s.includes('T') ? s : `${s}T00:00:00+07:00`
+    const date = new Date(iso)
+    return date.toLocaleDateString('th-TH', {
+      timeZone: 'Asia/Bangkok',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    })
   } catch {
-    return d
+    return String(d)
   }
 }
 </script>

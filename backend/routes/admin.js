@@ -77,7 +77,7 @@ router.patch('/orders/:id', async (req, res) => {
   try {
     // update orders
     await db.query(`UPDATE orders SET status=? WHERE order_id=?`, [status, id]);
-        // คืนสินค้าเข้าสต็อกถ้ายกเลิก
+    // คืนสินค้าเข้าสต็อกถ้ายกเลิก
     if (status === 'cancel') {
       const [items] = await db.query(
         'SELECT product_id, quantity FROM order_items WHERE order_id=?',
@@ -318,5 +318,101 @@ router.get('/stats/monthly', async (req, res) => {
   }
 });
 
+/* ================================
+   เพิ่มใหม่: ลบออเดอร์ (เฉพาะ pending และอายุมากกว่า 20 นาที)
+   DELETE /api/admin/orders/:id
+   ================================ */
+router.delete('/orders/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ message: 'invalid order id' });
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // lock order แถวนี้ก่อน
+    const [rows] = await conn.query(
+      `SELECT order_id, status, created_at FROM orders WHERE order_id=? FOR UPDATE`,
+      [id]
+    );
+    if (!rows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'order not found' });
+    }
+    const order = rows[0];
+
+    if ((order.status || '').toLowerCase() !== 'pending') {
+      await conn.rollback();
+      return res.status(400).json({ message: 'order is not pending' });
+    }
+
+    // ตรวจว่าอายุ >= 20 นาที
+    const createdMs = new Date(order.created_at).getTime();
+    const diffMin = (Date.now() - createdMs) / 60000;
+    if (diffMin < 20) {
+      await conn.rollback();
+      return res.status(400).json({ message: 'order is not older than 20 minutes' });
+    }
+
+    // คืนสต็อก
+    const [items] = await conn.query(
+      `SELECT product_id, quantity FROM order_items WHERE order_id=?`,
+      [id]
+    );
+    for (const it of items) {
+      await conn.query(
+        `UPDATE products SET stock = stock + ? WHERE product_id=?`,
+        [it.quantity, it.product_id]
+      );
+    }
+
+    // ลบความสัมพันธ์
+    await conn.query(`DELETE FROM order_items WHERE order_id=?`, [id]);
+    await conn.query(`DELETE FROM payments    WHERE order_id=?`, [id]);
+    await conn.query(`DELETE FROM deliveries  WHERE order_id=?`, [id]);
+    await conn.query(`DELETE FROM orders      WHERE order_id=?`, [id]);
+
+    await conn.commit();
+    return res.json({ message: 'order deleted' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[ADMIN_DELETE_ORDER_ERROR]', err);
+    return res.status(500).json({ message: 'delete failed', detail: err.message });
+  } finally {
+    conn.release();
+  }
+});
+
+/* ==========================================
+   เพิ่มใหม่: อัปเดตสถานะชำระเงินตาม order_id
+   PATCH /api/admin/payments/by-order/:orderId
+   body: { status: 'pending' | 'paid' | 'rejected' | 'needs_review' }
+   ========================================== */
+router.patch('/payments/by-order/:orderId', async (req, res) => {
+  const orderId = Number(req.params.orderId);
+  const { status } = req.body || {};
+  if (!orderId) return res.status(400).json({ message: 'invalid order id' });
+  if (!status)   return res.status(400).json({ message: 'missing status' });
+
+  const allowed = new Set(['pending', 'paid', 'rejected', 'needs_review']);
+  const norm = String(status).toLowerCase();
+  if (!allowed.has(norm)) {
+    return res.status(400).json({ message: 'invalid status' });
+  }
+
+  try {
+    const [r] = await db.query(
+      `UPDATE payments SET status=? WHERE order_id=?`,
+      [norm, orderId]
+    );
+    if (r.affectedRows === 0) {
+      return res.status(404).json({ message: 'payment not found' });
+    }
+    return res.json({ message: 'payment updated' });
+  } catch (err) {
+    console.error('[ADMIN_UPDATE_PAYMENT_STATUS_ERROR]', err);
+    return res.status(500).json({ message: 'update failed', detail: err.message });
+  }
+});
 
 module.exports = router;

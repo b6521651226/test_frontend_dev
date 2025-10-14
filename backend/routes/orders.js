@@ -60,50 +60,66 @@ router.post('/', verifyToken, upload.single('slip'), async (req, res) => {
       );
     }
 
-    // insert payment
+    // insert payment (เก็บ slip ที่แนบมาตอนสร้างออเดอร์ ถ้ามี)
     const slipUrl = req.file ? `/uploads/slips/${req.file.filename}` : null;
     await conn.query(
       'INSERT INTO payments (order_id, payment_slip_url, status) VALUES (?, ?, ?)',
       [orderId, slipUrl, 'pending']
     );
+
     // =============================
-// ✅ สร้าง QR PromptPay สำหรับออเดอร์นี้
-// =============================
-const path = require('path');
-const qrcode = require('qrcode');
-const generatePayload = require('promptpay-qr');
-const PROMPTPAY_ID = process.env.PROMPTPAY_ID;
+    // ✅ สร้าง QR PromptPay + bill_ref สำหรับออเดอร์นี้
+    // =============================
+    const path = require('path');
+    const fs = require('fs');
+    const qrcode = require('qrcode');
+    const generatePayload = require('promptpay-qr');
+    const PROMPTPAY_ID = process.env.PROMPTPAY_ID;
 
-try {
-  // gen payload จากยอด total
-  const amount = Number(total.toFixed(2));
-  const billRef = `ORD-${orderId}`;
+    try {
+      // ยอดที่ต้องชำระ
+      const amount = Number(total.toFixed(2));
 
-  const payload = generatePayload(PROMPTPAY_ID, { amount });
-  const qrRelPath = `/uploads/qr/ord_${orderId}.png`;
-  const qrAbsPath = path.join(__dirname, '..', 'public', qrRelPath);
+      // ✅ สร้าง bill_ref แบบ unique ต่อออเดอร์ (อ่านง่าย + สั้น)
+      // รูปแบบ: ORD-<orderId>-<สุ่ม6ตัว>
+      const rand = Math.random().toString(36).slice(-6).toUpperCase();
+      const billRef = `ORD-${orderId}-${rand}`;
 
-  // ✅ สร้างโฟลเดอร์ public/uploads/qr/ ถ้ายังไม่มี
-  const fs = require('fs');
-  const qrDir = path.dirname(qrAbsPath);
-  if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+      // ✅ gen payload: พยายามแนบ ref1 ถ้า lib รองรับ (บางเวอร์ชันอาจไม่รองรับ)
+      let payload = '';
+      try {
+        payload = generatePayload(PROMPTPAY_ID, { amount, ref1: billRef });
+      } catch (_e) {
+        // fallback ถ้า lib ไม่รองรับ ref1 ก็อย่างน้อยให้มี amount ไปก่อน
+        payload = generatePayload(PROMPTPAY_ID, { amount });
+      }
 
-  // ✅ สร้างไฟล์ QR
-  await qrcode.toFile(qrAbsPath, payload, { margin: 1, width: 360 });
+      // path ของไฟล์ QR
+      const qrRelPath = `/uploads/qr/ord_${orderId}.png`;
+      const qrAbsPath = path.join(__dirname, '..', 'public', qrRelPath);
 
-  // ✅ อัปเดตข้อมูลใน payments
-  await conn.query(
-    `UPDATE payments
-     SET amount_expected=?, qr_payload=?, qr_image_url=?, bill_ref=?
-     WHERE order_id=?`,
-    [amount, payload, qrRelPath, billRef, orderId]
-  );
+      // ✅ สร้างโฟลเดอร์ public/uploads/qr/ ถ้ายังไม่มี
+      const qrDir = path.dirname(qrAbsPath);
+      if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
-  console.log(`✅ QR พร้อมเพย์ถูกสร้างแล้ว -> ${qrRelPath}`);
-} catch (err) {
-  console.error('[QR_ERROR]', err);
-}
+      // ✅ สร้างไฟล์ QR
+      await qrcode.toFile(qrAbsPath, payload, { margin: 1, width: 360 });
 
+      // ✅ อัปเดตข้อมูลใน payments: เก็บยอดที่คาดหวัง + payload + รูป QR + bill_ref
+      await conn.query(
+        `UPDATE payments
+           SET amount_expected=?,
+               qr_payload=?,
+               qr_image_url=?,
+               bill_ref=?
+         WHERE order_id=?`,
+        [amount, payload, qrRelPath, billRef, orderId]
+      );
+
+      console.log(`✅ QR พร้อมเพย์ถูกสร้างแล้ว -> ${qrRelPath} (bill_ref=${billRef})`);
+    } catch (err) {
+      console.error('[QR_ERROR]', err);
+    }
 
     await conn.commit();
     res.status(201).json({ message: 'สร้างออเดอร์แล้ว', orderId, total, slip: slipUrl });
@@ -231,6 +247,7 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
     conn.release();
   }
 });
+
 
 
 module.exports = router;

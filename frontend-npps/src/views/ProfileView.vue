@@ -303,7 +303,7 @@ async function cancelOrder(o) {
   text-transform: lowercase; font-weight:700;
 }
 .st-pending { background:#fff8e1; color:#9a6b00; border-color:#ffe08a; }
-.st-paid    { background:#eaf9ed; color:#1b7f3a; border-color:#c9efcf; }
+.st-paid    { background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe; }
 .st-shipping{ background:#e8f5ff; color:#1565c0; border-color:#cfe9ff; }
 .st-done    { background:#eaf9ed; color:#2e7d32; border-color:#c9efcf; }
 .st-cancel  { background:#ffe9e9; color:#b40b0b; border-color:#ffd1d1; }

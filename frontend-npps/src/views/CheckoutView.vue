@@ -278,9 +278,17 @@ async function uploadSlipAndVerify() {
 
     // verify ผ่าน -> โชว์ modal
     success.value.order_code = String(orderId.value)
+    error.value = ''
+    // (ออปชัน) เคลียร์ไฟล์ เพื่อกันอัปซ้ำโดยไม่ตั้งใจ
+    slipFile.value = null
   } catch (e) {
     console.error(e)
-    error.value = e?.response?.data?.message || 'ยืนยันการชำระเงินไม่สำเร็จ'
+    // ✅ รองรับเคส 	pending (422) ให้โชว์ข้อความชัดเจน
+    if (e?.response?.status === 422) {
+      error.value = e.response.data?.message || 'อ่าน QR จากสลิปไม่ได้ — ส่งให้แอดมินตรวจสอบแล้ว'
+    } else {
+      error.value = e?.response?.data?.message || 'ยืนยันการชำระเงินไม่สำเร็จ'
+    }
   } finally {
     placing.value = false
   }

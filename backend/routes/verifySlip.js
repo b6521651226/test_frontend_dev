@@ -60,7 +60,7 @@ async function decodeQR(absPath) {
   let img2 = await readImage(absPath);
   try {
     const W = img2.bitmap.width;
-    const H = img2.bitmap.height;
+       const H = img2.bitmap.height;
     const maxW = 1400, maxH = 1400;
     let tw = W, th = H;
 
@@ -144,25 +144,40 @@ async function handleVerify(req, res, orderId) {
       console.warn('WARN: cannot decode slip QR ->', e);
     }
 
+    // 🔒 ใหม่: ถ้าอ่าน QR ไม่ได้ ให้ตั้ง 	pending	 แล้วจบ (ไม่ mark paid)
+    if (!decoded) {
+      await conn.query(
+        `UPDATE payments
+            SET payment_slip_url=?, status='pending'
+          WHERE order_id=?`,
+        [slipUrl, orderId]
+      );
+      await conn.commit();
+      return res.status(422).json({
+        message: 'อ่าน QR ในสลิปไม่สำเร็จ — ส่งให้ตรวจทาน',
+        order_id: orderId,
+        slip_url: slipUrl
+      });
+    }
+
     // 1) เช็คหมายเลขพร้อมเพย์ร้าน (ต้องเจอใน payload)
     const shopPP = (process.env.PROMPTPAY_ID || '').replace(/\D/g, '');
-    if (decoded && shopPP && !decoded.includes(shopPP)) {
+    if (shopPP && !decoded.includes(shopPP)) {
       await conn.rollback();
       return res.status(400).json({ message: 'QR ในสลิปไม่ตรงกับหมายเลขพร้อมเพย์ของร้าน' });
     }
 
     // 2) ถ้ามี bill_ref ใน DB ต้องเจอใน payload
-    if (decoded && pay.bill_ref && !decoded.includes(pay.bill_ref)) {
+    if (pay.bill_ref && !decoded.includes(pay.bill_ref)) {
       await conn.rollback();
       return res.status(400).json({ message: 'QR ในสลิปไม่ตรงกับออเดอร์นี้ (bill_ref mismatch)' });
     }
 
     // 3) ลองดึงยอด ถ้าไม่มีใน payload ก็ไม่เป็นไร (บางสลิปไม่ฝังยอด)
     let slipAmount = null;
-    if (decoded) {
-      const m = decoded.match(/(\d+\.\d{2})/);
-      if (m) slipAmount = parseFloat(m[1]);
-    }
+    const m = decoded.match(/(\d+\.\d{2})/);
+    if (m) slipAmount = parseFloat(m[1]);
+
     const expected = parseFloat(pay.amount_expected || 0);
     if (Number.isFinite(slipAmount)) {
       if (Math.abs(slipAmount - expected) > 0.01) {

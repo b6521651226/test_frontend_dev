@@ -48,8 +48,11 @@
             <div class="left">
               <span class="code">#{{ o.order_id }}</span>
               <span class="name">{{ o.username }}</span>
-              <!-- ✅ แสดงเฉพาะสถานะของออเดอร์ -->
+
+              <!-- ✅ สถานะของออเดอร์ (เดิม) -->
               <span class="badge" :class="badgeClass(o.order_status)">{{ o.order_status }}</span>
+
+
             </div>
 
             <div class="right">
@@ -83,6 +86,8 @@
                     <p>สลิปโอนเงิน:</p>
                     <img :src="apiBase + o.payment_slip_url" alt="slip" />
                   </div>
+
+
                 </div>
 
                 <div class="block">
@@ -92,12 +97,11 @@
                       v-model="o.tracking_number"
                       placeholder="Tracking number"
                     />
-                    
                   </div>
                 </div>
               </div>
 
-              <!-- ✅ บล็อกสินค้า: ดึงจากหน้า Profile มาใช้เหมือนกัน -->
+              <!-- ✅ บล็อกสินค้า -->
               <div class="items">
                 <h4>สินค้าในออเดอร์</h4>
                 <ul class="items-list">
@@ -118,7 +122,6 @@
                   </li>
                 </ul>
               </div>
-              <!-- /บล็อกสินค้า -->
 
               <div class="actions">
                 <label class="status-select">
@@ -136,6 +139,16 @@
 
                 <button class="btn primary" @click="updateStatus(o)">
                   บันทึกการเปลี่ยนแปลง
+                </button>
+
+                <!-- ✅ ปุ่มลบออเดอร์ (แสดงเมื่อค้างชำระ > 20 นาที และยัง pending) -->
+                <button
+                  v-if="allowDelete(o)"
+                  class="btn danger"
+                  @click="forceDelete(o)"
+                  title="ลบออเดอร์นี้ออกจากระบบ"
+                >
+                  ลบออเดอร์
                 </button>
               </div>
             </div>
@@ -211,6 +224,19 @@ async function updateStatus(order) {
   }
 }
 
+/* ✅ อัปเดตสถานะการชำระเงิน (รองรับ need_review) */
+async function updatePaymentStatus(order) {
+  try {
+    await api.patch(`/admin/payments/by-order/${order.order_id}`, {
+      status: order.payment_status
+    })
+    alert('อัปเดตสถานะการชำระเงินเรียบร้อย')
+  } catch (e) {
+    console.error(e)
+    alert('อัปเดตสถานะการชำระเงินไม่สำเร็จ')
+  }
+}
+
 function toggle(id) {
   expanded.value = expanded.value === id ? null : id
 }
@@ -237,7 +263,7 @@ function formatDate(dt) {
   }
 }
 
-// สีป้ายสถานะออเดอร์
+// สีป้ายสถานะออเดอร์ (เดิม)
 function badgeClass(status) {
   switch ((status || '').toLowerCase()) {
     case 'pending': return 'warn'
@@ -246,6 +272,42 @@ function badgeClass(status) {
     case 'done': return 'good'
     case 'cancel': return 'bad'
     default: return 'soft'
+  }
+}
+
+/* ✅ สีป้ายสถานะการชำระเงิน */
+function payBadgeClass(status) {
+  switch ((status || '').toLowerCase()) {
+    case 'pending': return 'soft'
+    case 'paid': return 'good'
+    case 'rejected': return 'bad'
+    case 'need_review': return 'warn' // ใช้โทนส้มเดียวกับ pending เพื่อดึงสายตา
+    default: return 'soft'
+  }
+}
+
+/* ✅ เงื่อนไขปุ่มลบ: ออเดอร์ pending + ยังไม่จ่าย + เกิน 20 นาที */
+function allowDelete(order) {
+  if ((order.order_status || '').toLowerCase() !== 'pending') return false
+  if ((order.payment_status || '').toLowerCase() === 'paid') return false
+  if (!order.created_at) return false
+  const created = new Date(order.created_at).getTime()
+  const now = Date.now()
+  const diffMin = (now - created) / 60000
+  return diffMin >= 20
+}
+
+/* ✅ ลบออเดอร์ (ยืนยันก่อน) */
+async function forceDelete(order) {
+  const ok = confirm(`ยืนยันลบออเดอร์ #${order.order_id} ?\n(ใช้เมื่อค้างชำระเกิน 20 นาทีเท่านั้น)`)
+  if (!ok) return
+  try {
+    await api.delete(`/admin/orders/${order.order_id}`)
+    alert('ลบออเดอร์เรียบร้อย')
+    await loadOrders()
+  } catch (e) {
+    console.error(e)
+    alert('ลบออเดอร์ไม่สำเร็จ')
   }
 }
 </script>
@@ -310,7 +372,7 @@ function badgeClass(status) {
 .item .price { font-weight: 700; }
 
 /* ---------- Actions ---------- */
-.actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 .status-select { display:flex; align-items:center; gap:8px; }
 .status-select select { padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
 .spacer { flex: 1; }
@@ -333,6 +395,7 @@ function badgeClass(status) {
 .btn.primary { background: #f1c40f; border-color: #f1c40f; color: #111827; }
 .btn.ghost { background: #fff; color: #111827; border-color: #e5e7eb; }
 .btn.ghost:hover { background:#f9fafb; }
+.btn.danger { background:#b91c1c; border-color:#b91c1c; } /* ✅ ปุ่มลบ */
 
 .track { display:flex; gap:8px; margin-top: 6px; }
 .track input { flex:1; padding: 8px 10px; border:1px solid #e5e7eb; border-radius:10px; outline:none; background:#fff; }

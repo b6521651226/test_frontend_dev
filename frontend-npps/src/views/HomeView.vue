@@ -21,7 +21,7 @@
         <div class="card metric">
           <div class="icon">🏭</div>
           <div class="title">มีสินค้ามากกว่า</div>
-          <div class="value">50 รายการ</div>
+          <div class="value">- รายการ</div>
           <div class="muted">รายการพร้อมส่ง</div>
         </div>
         <div class="card metric">

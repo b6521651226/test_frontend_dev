@@ -154,7 +154,7 @@ async function handleVerify(req, res, orderId) {
       );
       await conn.commit();
       return res.status(422).json({
-        message: 'อ่าน QR ในสลิปไม่สำเร็จ — ส่งให้ตรวจทาน',
+        message: 'อ่าน QR ในสลิปไม่สำเร็จ — ส่งให้ผู้ดูแลตรวจสอบ',
         order_id: orderId,
         slip_url: slipUrl
       });

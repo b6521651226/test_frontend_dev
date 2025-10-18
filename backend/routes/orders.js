@@ -77,41 +77,28 @@ router.post('/', verifyToken, upload.single('slip'), async (req, res) => {
     const PROMPTPAY_ID = process.env.PROMPTPAY_ID;
 
     try {
-      // ยอดที่ต้องชำระ
       const amount = Number(total.toFixed(2));
-
-      // ✅ สร้าง bill_ref แบบ unique ต่อออเดอร์ (อ่านง่าย + สั้น)
-      // รูปแบบ: ORD-<orderId>-<สุ่ม6ตัว>
       const rand = Math.random().toString(36).slice(-6).toUpperCase();
       const billRef = `ORD-${orderId}-${rand}`;
 
-      // ✅ gen payload: พยายามแนบ ref1 ถ้า lib รองรับ (บางเวอร์ชันอาจไม่รองรับ)
       let payload = '';
       try {
         payload = generatePayload(PROMPTPAY_ID, { amount, ref1: billRef });
-      } catch (_e) {
-        // fallback ถ้า lib ไม่รองรับ ref1 ก็อย่างน้อยให้มี amount ไปก่อน
+      } catch {
         payload = generatePayload(PROMPTPAY_ID, { amount });
       }
 
-      // path ของไฟล์ QR
       const qrRelPath = `/uploads/qr/ord_${orderId}.png`;
       const qrAbsPath = path.join(__dirname, '..', 'public', qrRelPath);
 
-      // ✅ สร้างโฟลเดอร์ public/uploads/qr/ ถ้ายังไม่มี
       const qrDir = path.dirname(qrAbsPath);
       if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
-      // ✅ สร้างไฟล์ QR
       await qrcode.toFile(qrAbsPath, payload, { margin: 1, width: 360 });
 
-      // ✅ อัปเดตข้อมูลใน payments: เก็บยอดที่คาดหวัง + payload + รูป QR + bill_ref
       await conn.query(
         `UPDATE payments
-           SET amount_expected=?,
-               qr_payload=?,
-               qr_image_url=?,
-               bill_ref=?
+           SET amount_expected=?, qr_payload=?, qr_image_url=?, bill_ref=?
          WHERE order_id=?`,
         [amount, payload, qrRelPath, billRef, orderId]
       );
@@ -139,16 +126,15 @@ router.get('/my', verifyToken, async (req, res) => {
     const [orders] = await pool.query(
       `SELECT o.order_id, o.status, o.total_price, o.created_at, o.updated_at,
               p.payment_slip_url, p.status AS payment_status,
-              d.tracking_number         -- ✅ เพิ่ม tracking_number
+              d.tracking_number
        FROM orders o
        LEFT JOIN payments p ON o.order_id = p.order_id
-       LEFT JOIN deliveries d ON o.order_id = d.order_id   -- ✅ join deliveries
+       LEFT JOIN deliveries d ON o.order_id = d.order_id
        WHERE o.user_id = ?
        ORDER BY o.created_at DESC`,
       [uid]
     );
 
-    // ดึง items ของแต่ละ order
     for (const order of orders) {
       const [items] = await pool.query(
         `SELECT oi.product_id, oi.quantity, oi.price,
@@ -169,7 +155,8 @@ router.get('/my', verifyToken, async (req, res) => {
 });
 
 // PATCH /api/orders/:id/cancel  (ลูกค้ายกเลิกออเดอร์ของตัวเอง)
-router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
+// ❗ แก้ path: ตัดคำว่า "orders/" ออก เพื่อให้ตรงกับ frontend
+router.patch('/:id/cancel', verifyToken, async (req, res) => {
   const uid = req.user.uid;
   const { id } = req.params;
 
@@ -177,7 +164,6 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // 1) ตรวจว่าเป็นออเดอร์ของผู้ใช้นี้ และยังอยู่สถานะ pending เท่านั้น
     const [rows] = await conn.query(
       `SELECT order_id, user_id, status 
        FROM orders 
@@ -195,7 +181,6 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
       return res.status(400).json({ message: 'คำสั่งซื้อนี้ไม่สามารถยกเลิกได้' });
     }
 
-    // 2) ดึง items มาคืนสต็อก
     const [items] = await conn.query(
       `SELECT product_id, quantity 
        FROM order_items 
@@ -212,7 +197,6 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
       );
     }
 
-    // 3) อัปเดตสถานะออเดอร์เป็น cancel
     await conn.query(
       `UPDATE orders 
        SET status='cancel', updated_at=NOW() 
@@ -220,8 +204,6 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
       [id]
     );
 
-    // 4) อัปเดต payment ให้เป็นค่าที่ ENUM รองรับ (หลีกเลี่ยง 'cancelled')
-    // ถ้า schema คุณมีค่า 'cancel' ใน ENUM ให้เปลี่ยนบรรทัดด้านล่างเป็น status='cancel'
     await conn.query(
       `UPDATE payments 
        SET status = IF(status='paid','paid','pending') 
@@ -229,7 +211,6 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
       [id]
     );
 
-    // (ทางเลือก) mark การขนส่งเป็น cancel ถ้ามี record อยู่
     await conn.query(
       `UPDATE deliveries 
        SET status='cancel' 
@@ -248,6 +229,51 @@ router.patch('/orders/:id/cancel', verifyToken, async (req, res) => {
   }
 });
 
+/* ✅ ใหม่: ลูกค้ายืนยันรับสินค้าแล้ว (เฉพาะสถานะ shipping) */
+// ❗ แก้ path: ตัดคำว่า "orders/" ออก เพื่อให้ตรงกับ frontend
+router.patch('/:id/received', verifyToken, async (req, res) => {
+  const uid = req.user.uid;
+  const { id } = req.params;
 
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.query(
+      `SELECT order_id, user_id, status
+         FROM orders
+        WHERE order_id=? AND user_id=?
+        FOR UPDATE`,
+      [id, uid]
+    );
+
+    if (!rows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: 'ไม่พบคำสั่งซื้อของผู้ใช้นี้' });
+    }
+    if (rows[0].status !== 'shipping') {
+      await conn.rollback();
+      return res.status(400).json({ message: 'ออเดอร์นี้ยังไม่อยู่สถานะจัดส่ง' });
+    }
+
+    await conn.query(
+      `UPDATE orders SET status='done', updated_at=NOW() WHERE order_id=?`,
+      [id]
+    );
+    await conn.query(
+      `UPDATE deliveries SET status='done' WHERE order_id=?`,
+      [id]
+    );
+
+    await conn.commit();
+    res.json({ message: 'อัปเดตเป็น DONE แล้ว' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('[RECEIVED_ERROR]', err);
+    res.status(500).json({ message: 'บันทึกการรับสินค้าไม่สำเร็จ' });
+  } finally {
+    conn.release();
+  }
+});
 
 module.exports = router;

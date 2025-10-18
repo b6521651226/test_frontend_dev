@@ -84,7 +84,7 @@
                   <p>ยอดที่จ่าย: <b>{{ format(o.total_price) }} ฿</b></p>
                   <div v-if="o.payment_slip_url" class="slip">
                     <p>สลิปโอนเงิน:</p>
-                    <img :src="apiBase + o.payment_slip_url" alt="slip" />
+                    <img :src="(apiBase + o.payment_slip_url) + '?_=' + (o.updated_at || o.paid_at || Date.now())" alt="slip" />
                   </div>
 
 

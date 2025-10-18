@@ -10,6 +10,7 @@
       </header>
 
       <div v-if="loading" class="empty">กำลังโหลดตะกร้า...</div>
+      <!-- ถ้ายังไม่มีสินค้าและยังไม่กดสร้างออเดอร์ -->
       <div v-else-if="items.length === 0 && !orderId" class="empty">ไม่มีสินค้าในตะกร้า</div>
 
       <section v-else class="grid">
@@ -42,10 +43,14 @@
                 <p class="hint">เมื่อโอนเสร็จให้อัปโหลดสลิปเพื่อยืนยันการชำระเงิน</p>
               </div>
 
-              <label class="file">
-                อัปโหลดสลิปโอนเงิน (jpg/png)
-                <input type="file" accept="image/*" @change="onSlipChange" />
-              </label>
+              <!-- ❗️ส่วนอัปโหลดสลิปจะแสดงเฉพาะเมื่อมี orderId (สร้าง QR แล้ว) -->
+              <template v-if="orderId">
+                <label class="file">
+                  อัปโหลดสลิปโอนเงิน (jpg/png)
+                  <input type="file" accept="image/*" @change="onSlipChange" />
+                </label>
+              </template>
+              <p v-else class="hint">* กรุณากด “สร้างออเดอร์ / ขอ QR” ก่อน เพื่อเปิดส่วนอัปโหลดสลิป</p>
             </div>
 
             <!-- 🔘 ปุ่มที่ 1: สร้างออเดอร์ / ขอ QR (ไม่ต้องมีสลิป) -->
@@ -57,10 +62,11 @@
               {{ placing && !orderId ? 'กำลังสร้างคำสั่งซื้อ...' : 'สร้างออเดอร์ / ขอ QR' }}
             </button>
 
-            <!-- 🔘 ปุ่มที่ 2: อัปโหลดสลิป & ยืนยันชำระเงิน (ต้องมี orderId และสลิป) -->
+            <!-- 🔘 ปุ่มที่ 2: อัปโหลดสลิป & ยืนยันชำระเงิน (โผล่เฉพาะเมื่อมี orderId แล้ว) -->
             <button
+              v-if="orderId"
               class="btn mt"
-              :disabled="placing || !orderId || !slipFile"
+              :disabled="placing || !slipFile"
               @click="uploadSlipAndVerify"
             >
               {{ placing && orderId ? 'กำลังยืนยันการชำระเงิน...' : 'อัปโหลดสลิป & ยืนยันชำระเงิน' }}
@@ -70,13 +76,14 @@
           </div>
         </div>
 
-        <!-- ขวา: สรุปรายการสินค้า (แสดงเฉพาะตอนยังไม่เคลียร์ตะกร้า) -->
-        <aside class="right" v-if="items.length">
+        <!-- ขวา: สรุปรายการสินค้า
+             ✅ ใช้ displayItems (snapshot) เพื่อไม่ให้หายหลังสร้าง QR -->
+        <aside class="right" v-if="displayItems.length">
           <div class="card">
             <h3 class="card-title">สรุปรายการ</h3>
 
             <ul class="items">
-              <li v-for="it in items" :key="it.cart_id" class="item">
+              <li v-for="it in displayItems" :key="it.cart_id || it.product_id" class="item">
                 <div class="meta">
                   <div class="name" :title="it.name">{{ it.name }}</div>
                   <div class="sub">
@@ -121,6 +128,7 @@ import { ref, onMounted, computed } from 'vue'
 import api from '../lib/api'
 
 const items = ref([])
+const itemsSnapshot = ref([])   // ✅ เก็บสำเนาสินค้าไว้แสดงหลังเคลียร์ตะกร้า
 const loading = ref(false)
 const placing = ref(false)
 const error = ref('')
@@ -140,8 +148,13 @@ const shipping = ref({
 const format = (n) =>
   Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+/** ✅ ใช้ displayItems เป็นแหล่งข้อมูลหลักสำหรับแสดงผล */
+const displayItems = computed(() =>
+  items.value.length ? items.value : itemsSnapshot.value
+)
+
 const cartTotal = computed(() =>
-  items.value.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0)
+  displayItems.value.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0)
 )
 
 const canCreateOrder = computed(() =>
@@ -222,6 +235,8 @@ async function createOrderAndFetchQR() {
     // เก็บ orderId ไว้ใช้ขั้น verify + ดึง QR
     if (data?.orderId) {
       orderId.value = data.orderId
+
+      // โหลด QR
       try {
         const res = await api.get(`/payments/by-order/${data.orderId}`)
         qrUrl.value = res.data?.qr_image_url
@@ -234,7 +249,10 @@ async function createOrderAndFetchQR() {
       }
     }
 
-    // เคลียร์ตะกร้าเหมือนเดิม (ป้องกันกดสร้างซ้ำ)
+    // ✅ snapshot รายการไว้ก่อนเคลียร์ตะกร้า (เพื่อไม่ให้ UI หาย)
+    itemsSnapshot.value = items.value.map(i => ({ ...i }))
+
+    // ✅ เคลียร์ตะกร้าใน backend กันกดซ้ำ แต่ UI ยังแสดงจาก snapshot
     try {
       await api.delete('/cart/clear')
     } catch {
@@ -242,7 +260,7 @@ async function createOrderAndFetchQR() {
         try { await api.delete(`/cart/${it.cart_id}`) } catch {}
       }
     }
-    items.value = []
+    items.value = [] // UI จะไปใช้ itemsSnapshot แทน
   } catch (e) {
     console.error(e)
     error.value = e?.response?.data?.message || 'สร้างคำสั่งซื้อไม่สำเร็จ'
@@ -283,9 +301,10 @@ async function uploadSlipAndVerify() {
     slipFile.value = null
   } catch (e) {
     console.error(e)
-    // ✅ รองรับเคส 	pending (422) ให้โชว์ข้อความชัดเจน
+    // ✅ รองรับเคส pending (422) ให้ข้อความสุภาพ
     if (e?.response?.status === 422) {
-      error.value = e.response.data?.message || 'อ่าน QR จากสลิปไม่ได้ — ส่งให้แอดมินตรวจสอบแล้ว'
+      error.value = e.response.data?.message || 'อัปโหลดสลิปสำเร็จ ระบบกำลังตรวจสอบ'
+      success.value.order_code = String(orderId.value) // แสดง modal ได้เหมือนเดิม
     } else {
       error.value = e?.response?.data?.message || 'ยืนยันการชำระเงินไม่สำเร็จ'
     }

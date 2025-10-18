@@ -67,6 +67,26 @@
           </span>
           <div class="actions-row">
 
+            <!-- ✅ ปุ่มยกเลิก (เฉพาะสถานะ pending) -->
+            <button
+              v-if="o.status === 'pending'"
+              class="btn danger sm"
+              :disabled="cancellingId === o.order_id"
+              @click="cancelOrder(o)"
+            >
+              {{ cancellingId === o.order_id ? 'กำลังยกเลิก...' : 'ยกเลิกคำสั่งซื้อ' }}
+            </button>
+
+            <!-- ✅ ปุ่มลูกค้ายืนยันรับสินค้า (เฉพาะ shipping) -->
+            <button
+              v-if="o.status === 'shipping'"
+              class="btn primary sm"
+              :disabled="confirmingId === o.order_id"
+              @click="confirmReceived(o)"
+            >
+              {{ confirmingId === o.order_id ? 'กำลังบันทึก...' : 'ได้รับสินค้าแล้ว' }}
+            </button>
+
             <button class="btn ghost sm" @click="toggle(o.order_id)">
               {{ expanded === o.order_id ? 'ซ่อน' : 'รายละเอียด' }}
             </button>
@@ -76,6 +96,47 @@
         <!-- Detail -->
         <transition name="fade">
           <div v-if="expanded === o.order_id" class="order-body">
+
+            <!-- ✅ กล่องเครื่องมือชำระเงินย้อนหลัง (เฉพาะ pending / needs_review) -->
+            <div
+              v-if="o.status === 'pending' || o.status === 'needs_review'"
+              class="retro-box"
+            >
+              <div class="retro-row">
+                <button
+                  class="btn ghost sm"
+                  @click="toggleQR(o)"
+                  :disabled="loadingQRId === o.order_id"
+                >
+                  {{ showQR[o.order_id] ? 'ซ่อน QR' : (loadingQRId === o.order_id ? 'กำลังโหลด QR...' : 'ดู QR สำหรับออเดอร์นี้') }}
+                </button>
+
+                <div class="fileup">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    :id="`slip-${o.order_id}`"
+                    @change="onPickSlip(o, $event)"
+                  />
+                </div>
+
+                <button
+                  class="btn primary sm"
+                  :disabled="!slipFiles[o.order_id] || uploadingId === o.order_id"
+                  @click="submitSlip(o)"
+                >
+                  {{ uploadingId === o.order_id ? 'กำลังอัปโหลด...' : 'อัปสลิปยืนยัน' }}
+                </button>
+              </div>
+
+              <div v-if="showQR[o.order_id] && qrUrls[o.order_id]" class="qr-wrap">
+                <img :src="qrUrls[o.order_id]" alt="Order QR" />
+                <div class="hint">สแกน QR เพื่อชำระ แล้วอัปโหลดสลิปด้านบน</div>
+              </div>
+            </div>
+            <!-- /retro tools -->
+
+            <!-- รายการสินค้า -->
             <ul class="items">
               <li v-for="it in o.items" :key="`${o.order_id}-${it.product_id}`" class="item">
                 <img :src="apiBase + it.image_url" alt="" />
@@ -90,6 +151,7 @@
               </li>
             </ul>
 
+            <!-- สลิปเดิม (ถ้ามี) -->
             <div v-if="o.payment_slip_url" class="slip">
               <div class="slip-title">สลิปโอนเงิน</div>
               <a :href="apiBase + o.payment_slip_url" target="_blank" rel="noopener">
@@ -97,6 +159,7 @@
               </a>
             </div>
 
+            <!-- tracking (ถ้ามี) -->
             <div v-if="o.tracking_number" class="tracking">
               <span class="truck">📦</span>
               <span class="t-title">Tracking:</span>
@@ -124,6 +187,14 @@ const msg = ref('')
 const orders = ref([])
 const expanded = ref(null)
 const cancellingId = ref(null)
+
+/* ✅ states ใหม่สำหรับอัปสลิปย้อนหลัง + แสดง QR */
+const slipFiles = ref({})        // { [orderId]: File }
+const uploadingId = ref(null)    // กำลังอัปสลิปของ order ไหน
+const qrUrls = ref({})           // { [orderId]: 'http://...' }
+const showQR = ref({})           // { [orderId]: boolean }
+const loadingQRId = ref(null)    // กำลังโหลด QR ของ order ไหน
+const confirmingId = ref(null)   // กำลัง confirm received ของ order ไหน
 
 onMounted(async () => {
   await loadProfile()
@@ -209,6 +280,84 @@ async function cancelOrder(o) {
     alert(e?.response?.data?.message || 'ยกเลิกคำสั่งซื้อไม่สำเร็จ')
   } finally {
     cancellingId.value = null
+  }
+}
+
+/* ========== อัปสลิปย้อนหลัง ========== */
+function onPickSlip(o, ev) {
+  const f = ev.target.files?.[0]
+  if (f) {
+    slipFiles.value = { ...slipFiles.value, [o.order_id]: f }
+  }
+}
+
+async function submitSlip(o) {
+  if (!slipFiles.value[o.order_id]) return
+  try {
+    uploadingId.value = o.order_id
+    const fd = new FormData()
+    fd.append('slip', slipFiles.value[o.order_id])
+
+    // ยิงแบบ path param ก่อน
+    try {
+      await api.post(`/payments/verify-slip/${o.order_id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    } catch (_e) {
+      // สำรองแบบ query
+      await api.post(`/payments/verify-slip?order_id=${o.order_id}`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+    }
+
+    // โหลดข้อมูลออเดอร์ใหม่
+    await loadOrders()
+    alert('ส่งสลิปเรียบร้อย กำลังตรวจสอบ')
+  } catch (e) {
+    console.error(e)
+    alert(e?.response?.data?.message || 'อัปสลิปไม่สำเร็จ')
+  } finally {
+    uploadingId.value = null
+  }
+}
+
+/* ========== ดู QR ของออเดอร์ ========== */
+async function toggleQR(o) {
+  const id = o.order_id
+  if (showQR.value[id]) {
+    showQR.value = { ...showQR.value, [id]: false }
+    return
+  }
+  try {
+    loadingQRId.value = id
+    const { data } = await api.get(`/payments/by-order/${id}`)
+    const url = data?.qr_image_url
+      ? (String(data.qr_image_url).startsWith('http') ? data.qr_image_url : `${apiBase}${data.qr_image_url}`)
+      : ''
+    qrUrls.value = { ...qrUrls.value, [id]: url }
+    showQR.value = { ...showQR.value, [id]: true }
+  } catch (e) {
+    console.error(e)
+    alert('โหลด QR ไม่สำเร็จ')
+  } finally {
+    loadingQRId.value = null
+  }
+}
+
+/* ========== ลูกค้ายืนยันรับสินค้า (mark done) ========== */
+async function confirmReceived(o) {
+  if (o.status !== 'shipping') return
+  if (!confirm(`ยืนยันได้รับสินค้าแล้วสำหรับ #${o.order_id} ?`)) return
+  try {
+    confirmingId.value = o.order_id
+    await api.patch(`/orders/${o.order_id}/received`) // <- ต้องมี route ฝั่ง backend
+    await loadOrders()
+    alert('อัปเดตเป็น DONE แล้ว ขอบคุณครับ')
+  } catch (e) {
+    console.error(e)
+    alert(e?.response?.data?.message || 'อัปเดตไม่สำเร็จ')
+  } finally {
+    confirmingId.value = null
   }
 }
 </script>
@@ -310,6 +459,41 @@ async function cancelOrder(o) {
 
 /* Body */
 .order-body { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee; }
+
+/* retro tools */
+.retro-box {
+  margin-bottom: 10px;
+  padding: 10px;
+  background: #fffdfa;
+  border: 1px dashed #fcd34d;
+  border-radius: 10px;
+}
+.retro-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.fileup input[type="file"] {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+.qr-wrap {
+  margin-top: 10px;
+  text-align: center;
+}
+.qr-wrap img {
+  width: 220px;
+  height: 220px;
+  object-fit: contain;
+  border: 1px solid #eee;
+  border-radius: 12px;
+}
+.hint { color:#6b7280; font-size:12px; margin-top:4px; }
+
+/* items */
 .items { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
 .item { display:flex; align-items:center; gap:12px; }
 .item img { width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid #eee; }

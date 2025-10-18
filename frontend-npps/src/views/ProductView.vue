@@ -9,6 +9,14 @@
         </div>
 
         <div class="toolbar">
+          <!-- ✅ เลือกหมวดหมู่ -->
+          <select v-model.number="selectedCategory" @change="reloadByCategory" class="cat-select">
+            <option :value="0">หมวดหมู่ทั้งหมด</option>
+            <option v-for="c in categories" :key="c.category_id" :value="c.category_id">
+              {{ c.name }}
+            </option>
+          </select>
+
           <div class="search">
             <span class="icon">🔎</span>
             <input v-model="search" type="text" placeholder="ค้นหาสินค้า..." />
@@ -26,6 +34,7 @@
             <div class="price">{{ Number(product.price).toLocaleString('th-TH', {minimumFractionDigits:2}) }} ฿</div>
             <div class="stock-row">
               <span class="badge soft">คงเหลือ: {{ product.stock }} ชิ้น</span>
+              <span class="badge soft" v-if="product.category_name">{{ product.category_name }}</span>
             </div>
           </div>
 
@@ -57,19 +66,39 @@ const page = ref(1)
 const itemsPerPage = 4
 const products = ref([])
 const loading = ref(true)
+const categories = ref([])           // ✅ หมวดหมู่ทั้งหมด
+const selectedCategory = ref(0)      // 0 = ทั้งหมด
 const apiBase = import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
 onMounted(async () => {
+  await Promise.all([loadCategories(), loadProducts()])
+  loading.value = false
+})
+
+async function loadCategories() {
   try {
-    const res = await fetch('http://localhost:4000/api/products')
-    const data = await res.json()
-    products.value = data.map(p => ({ ...p, qty: 1, selectedOption: '' }))
+    const { data } = await api.get('/products/categories')
+    categories.value = data || []
+  } catch (err) {
+    console.error('โหลดหมวดหมู่ไม่สำเร็จ', err)
+  }
+}
+
+async function loadProducts() {
+  try {
+    const { data } = await api.get('/products', {
+      params: selectedCategory.value ? { category_id: selectedCategory.value } : {}
+    })
+    products.value = (data || []).map(p => ({ ...p, qty: 1, selectedOption: '' }))
   } catch (err) {
     console.error('โหลดสินค้าไม่สำเร็จ', err)
-  } finally {
-    loading.value = false
   }
-})
+}
+
+function reloadByCategory() {
+  page.value = 1
+  loadProducts()
+}
 
 const filteredProducts = computed(() => {
   const start = (page.value - 1) * itemsPerPage
@@ -121,6 +150,10 @@ async function addToCart(product) {
 
 /* ===== Toolbar / Search ===== */
 .toolbar { display:flex; gap:12px; align-items:center; }
+.cat-select{
+  padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; background:#fff; outline:none;
+}
+.cat-select:focus{ border-color:#f1c40f; box-shadow:0 0 0 3px rgba(241,196,15,.15); }
 .search { position:relative; width:min(520px,80vw); }
 .search .icon { position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:14px; }
 .search input{
@@ -145,7 +178,7 @@ async function addToCart(product) {
 .meta{ display:grid; gap:6px; margin-top:8px; }
 .name{ font-weight:700; line-height:1.35; height:2.7em; overflow:hidden; }
 .price{ font-weight:700; }
-.stock-row{ margin-top:2px; }
+.stock-row{ margin-top:2px; display:flex; gap:6px; flex-wrap:wrap; }
 
 /* qty */
 .qty-row{

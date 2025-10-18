@@ -202,22 +202,12 @@ router.put('/users/:id', async (req, res) => {
 });
 
 // ====== Sales Dashboard Stats (REVISED) ======
-
-// ใช้สถานะเดียวกันทุก endpoint
 const COUNT_STATUSES = ['paid', 'shipping', 'done'];
-
-/**
- * Helper: field วันที่ตามเวลาไทย เพื่อความสม่ำเสมอ
- * - ถ้าคุณตั้ง time_zone เป็น +07:00 แล้วอยู่แล้ว ก็ยังใช้ได้
- * - ใช้ CONVERT_TZ กันพลาดกรณี session time_zone ไม่ตรง
- */
 const TH_DATE = "DATE(CONVERT_TZ(created_at, '+00:00', '+07:00'))";
 const TH_MONTH = "DATE_FORMAT(CONVERT_TZ(created_at, '+00:00', '+07:00'), '%Y-%m')";
 
-/** Summary: today / this month / all time */
 router.get('/stats/summary', async (req, res) => {
   try {
-    // Today (เวลาไทย)
     const [todayRows] = await db.query(
       `
       SELECT 
@@ -230,7 +220,6 @@ router.get('/stats/summary', async (req, res) => {
       COUNT_STATUSES
     );
 
-    // This month (เวลาไทย)
     const [monthRows] = await db.query(
       `
       SELECT 
@@ -244,7 +233,6 @@ router.get('/stats/summary', async (req, res) => {
       COUNT_STATUSES
     );
 
-    // All time
     const [allRows] = await db.query(
       `
       SELECT 
@@ -267,7 +255,6 @@ router.get('/stats/summary', async (req, res) => {
   }
 });
 
-/** รายวันย้อนหลัง N วัน (default 14) */
 router.get('/stats/daily', async (req, res) => {
   const days = Math.max(1, Math.min(Number(req.query.days) || 14, 90));
   try {
@@ -292,7 +279,6 @@ router.get('/stats/daily', async (req, res) => {
   }
 });
 
-/** รายเดือนย้อนหลัง N เดือน (default 6) */
 router.get('/stats/monthly', async (req, res) => {
   const months = Math.max(1, Math.min(Number(req.query.months) || 6, 24));
   try {
@@ -319,8 +305,7 @@ router.get('/stats/monthly', async (req, res) => {
 });
 
 /* ================================
-   เพิ่มใหม่: ลบออเดอร์ (เฉพาะ pending และอายุมากกว่า 20 นาที)
-   DELETE /api/admin/orders/:id
+   ลบออเดอร์ (เดิม)
    ================================ */
 router.delete('/orders/:id', async (req, res) => {
   const id = Number(req.params.id);
@@ -330,7 +315,6 @@ router.delete('/orders/:id', async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // lock order แถวนี้ก่อน
     const [rows] = await conn.query(
       `SELECT order_id, status, created_at FROM orders WHERE order_id=? FOR UPDATE`,
       [id]
@@ -346,7 +330,6 @@ router.delete('/orders/:id', async (req, res) => {
       return res.status(400).json({ message: 'order is not pending' });
     }
 
-    // ตรวจว่าอายุ >= 20 นาที
     const createdMs = new Date(order.created_at).getTime();
     const diffMin = (Date.now() - createdMs) / 60000;
     if (diffMin < 20) {
@@ -354,7 +337,6 @@ router.delete('/orders/:id', async (req, res) => {
       return res.status(400).json({ message: 'order is not older than 20 minutes' });
     }
 
-    // คืนสต็อก
     const [items] = await conn.query(
       `SELECT product_id, quantity FROM order_items WHERE order_id=?`,
       [id]
@@ -366,7 +348,6 @@ router.delete('/orders/:id', async (req, res) => {
       );
     }
 
-    // ลบความสัมพันธ์
     await conn.query(`DELETE FROM order_items WHERE order_id=?`, [id]);
     await conn.query(`DELETE FROM payments    WHERE order_id=?`, [id]);
     await conn.query(`DELETE FROM deliveries  WHERE order_id=?`, [id]);
@@ -384,9 +365,7 @@ router.delete('/orders/:id', async (req, res) => {
 });
 
 /* ==========================================
-   เพิ่มใหม่: อัปเดตสถานะชำระเงินตาม order_id
-   PATCH /api/admin/payments/by-order/:orderId
-   body: { status: 'pending' | 'paid' | 'rejected' | 'needs_review' }
+   อัปเดตสถานะชำระเงินตาม order_id (เดิม)
    ========================================== */
 router.patch('/payments/by-order/:orderId', async (req, res) => {
   const orderId = Number(req.params.orderId);
@@ -412,6 +391,87 @@ router.patch('/payments/by-order/:orderId', async (req, res) => {
   } catch (err) {
     console.error('[ADMIN_UPDATE_PAYMENT_STATUS_ERROR]', err);
     return res.status(500).json({ message: 'update failed', detail: err.message });
+  }
+});
+
+/* ==========================================
+   NEW: Admin – categories CRUD แบบเบาๆ
+   base path: /api/admin/categories
+   ========================================== */
+
+// list
+router.get('/categories', async (_req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT category_id, name FROM categories ORDER BY name ASC'
+    );
+    res.json(rows);
+  } catch (e) {
+    console.error('[ADMIN_CATEGORIES_LIST]', e);
+    res.status(500).json({ message: 'โหลดหมวดหมู่ล้มเหลว' });
+  }
+});
+
+// create
+router.post('/categories', async (req, res) => {
+  const { name } = req.body || {};
+  if (!name) return res.status(400).json({ message: 'กรุณาระบุชื่อหมวดหมู่' });
+  try {
+    const [r] = await db.query(
+      'INSERT INTO categories (name) VALUES (?)',
+      [name]
+    );
+    res.json({ message: 'เพิ่มหมวดหมู่สำเร็จ', category_id: r.insertId });
+  } catch (e) {
+    console.error('[ADMIN_CATEGORIES_CREATE]', e);
+    res.status(500).json({ message: 'เพิ่มหมวดหมู่ล้มเหลว' });
+  }
+});
+
+// update
+router.put('/categories/:id', async (req, res) => {
+  const { name } = req.body || {};
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ message: 'invalid id' });
+  if (!name) return res.status(400).json({ message: 'กรุณาระบุชื่อหมวดหมู่' });
+  try {
+    await db.query('UPDATE categories SET name=? WHERE category_id=?', [name, id]);
+    res.json({ message: 'แก้ไขหมวดหมู่สำเร็จ' });
+  } catch (e) {
+    console.error('[ADMIN_CATEGORIES_UPDATE]', e);
+    res.status(500).json({ message: 'แก้ไขหมวดหมู่ล้มเหลว' });
+  }
+});
+
+// delete (เซฟ ๆ: เคลียร์ category_id ใน products ให้เป็น NULL ก่อน)
+router.delete('/categories/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!id) return res.status(400).json({ message: 'invalid id' });
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(
+      'UPDATE products SET category_id = NULL WHERE category_id = ?',
+      [id]
+    );
+    const [r] = await conn.query(
+      'DELETE FROM categories WHERE category_id = ?',
+      [id]
+    );
+
+    await conn.commit();
+    if (r.affectedRows === 0) {
+      return res.status(404).json({ message: 'ไม่พบหมวดหมู่' });
+    }
+    res.json({ message: 'ลบหมวดหมู่สำเร็จ' });
+  } catch (e) {
+    await conn.rollback();
+    console.error('[ADMIN_CATEGORIES_DELETE]', e);
+    res.status(500).json({ message: 'ลบหมวดหมู่ล้มเหลว' });
+  } finally {
+    conn.release();
   }
 });
 

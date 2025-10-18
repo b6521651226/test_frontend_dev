@@ -20,6 +20,7 @@
               <th style="width:80px">ID</th>
               <th style="width:100px">รูป</th>
               <th>ชื่อสินค้า</th>
+              <th style="width:140px">หมวดหมู่</th>
               <th class="right" style="width:160px">ราคา</th>
               <th class="right" style="width:120px">สต็อก</th>
               <th style="width:160px">การจัดการ</th>
@@ -35,6 +36,10 @@
                 <div class="name">{{ p.product_name }}</div>
                 <div class="sku" v-if="p.sku">SKU: {{ p.sku }}</div>
               </td>
+              <td>
+                <span class="badge soft" v-if="p.category_name">{{ p.category_name }}</span>
+                <span class="muted" v-else>-</span>
+              </td>
               <td class="right strong">{{ format(p.price) }} ฿</td>
               <td class="right">{{ p.stock }}</td>
               <td>
@@ -45,7 +50,7 @@
               </td>
             </tr>
             <tr v-if="!products.length">
-              <td colspan="6" class="empty">ยังไม่มีสินค้า</td>
+              <td colspan="7" class="empty">ยังไม่มีสินค้า</td>
             </tr>
           </tbody>
         </table>
@@ -96,6 +101,16 @@
               </label>
             </div>
 
+            <!-- ✅ เลือกหมวดหมู่ (เพิ่มใหม่) -->
+            <label>หมวดหมู่
+              <select v-model="form.category_id">
+                <option :value="null">— ไม่ระบุหมวด —</option>
+                <option v-for="c in categories" :key="c.category_id" :value="c.category_id">
+                  {{ c.name }}
+                </option>
+              </select>
+            </label>
+
             <label v-if="'sku' in form">SKU (ถ้ามี)
               <input v-model.trim="form.sku" placeholder="เช่น SKU-001" />
             </label>
@@ -121,6 +136,7 @@ import api from '../lib/api'
 import AdminNavbar from '../components/AdminNavbar.vue'
 
 const products = ref([])
+const categories = ref([]) // ✅ list หมวดหมู่
 const showForm = ref(false)
 const form = ref({})
 const file = ref(null)
@@ -132,14 +148,26 @@ const msg = ref('')
 const apiBase =
   import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
-onMounted(loadProducts)
+onMounted(async () => {
+  await Promise.all([loadProducts(), loadCategories()])
+})
 
 async function loadProducts() {
   try {
+    // ใช้ endpoint /products แบบใหม่ที่คืน category_name มาด้วย
     const { data } = await api.get('/products')
     products.value = data || []
   } catch (e) {
     console.error('[LOAD_PRODUCTS_ERROR]', e)
+  }
+}
+
+async function loadCategories() {
+  try {
+    const { data } = await api.get('/admin/categories')
+    categories.value = data || []
+  } catch (e) {
+    console.error('[LOAD_CATEGORIES_ERROR]', e)
   }
 }
 
@@ -149,8 +177,8 @@ function format(n) {
 
 function openForm(p = null) {
   form.value = p
-    ? { ...p }
-    : { product_name: '', price: 0, stock: 0, image_url: '' }
+    ? { ...p, category_id: p.category_id ?? null }
+    : { product_name: '', price: 0, stock: 0, image_url: '', category_id: null }
   file.value = null
   previewUrl.value = form.value.image_url ? apiBase + form.value.image_url : ''
   showForm.value = true
@@ -211,6 +239,7 @@ async function saveProduct() {
       price: Number(form.value.price || 0),
       stock: Number(form.value.stock || 0),
       image_url: imageUrl,
+      category_id: form.value.category_id ?? null,
       ...(form.value.sku ? { sku: form.value.sku } : {})
     }
 
@@ -279,7 +308,7 @@ async function removeProduct(id) {
 
 .row-actions { display:flex; gap:8px; }
 
-/* Buttons (ตามธีม Order/Profile) */
+/* Buttons */
 .btn {
   padding:8px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff; cursor:pointer;
   transition: filter .15s, background .15s, color .15s;
@@ -327,12 +356,16 @@ async function removeProduct(id) {
 /* Form */
 .form { display:grid; gap:10px; }
 .form label { display:grid; gap:6px; font-weight:600; }
-.form input {
+.form input, .form select {
   padding:10px 12px; border:1px solid #e5e7eb; border-radius:10px; outline:none; background:#fff;
 }
-.form input:focus { border-color:#f1c40f; box-shadow:0 0 0 3px rgba(241,196,15,.15); }
+.form input:focus, .form select:focus { border-color:#f1c40f; box-shadow:0 0 0 3px rgba(241,196,15,.15); }
 .row-2 { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
 
 .actions { display:flex; gap:10px; margin-top:6px; }
 .msg { color:#b40b0b; margin-top:4px; }
+
+/* badge */
+.badge{ font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid transparent; font-weight:700; }
+.badge.soft{ background:#f3f4f6; color:#374151; }
 </style>

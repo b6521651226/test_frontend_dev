@@ -26,49 +26,135 @@ function doLogout() {
     </nav>
 
     <div class="auth">
-      <button @click="doLogout" class="btn-outline">ออกจากระบบ</button>
+      <button @click="doLogout" class="btn-logout">ออกจากระบบ</button>
     </div>
   </header>
 </template>
 
 <style scoped>
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
-  font-family: 'Kanit', sans-serif;
+  padding: var(--sp-4) var(--sp-6);
+  min-height: 68px;
+  background: var(--bg-navbar);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid rgba(249, 115, 22, 0.15);
 }
 
-.logo img { height: 50px; }
+.logo img {
+  height: 48px;
+  width: auto;
+  display: block;
+}
 
 .menu {
   display: flex;
-  gap: 30px;
+  gap: var(--sp-2);
   justify-content: center;
   align-items: center;
   flex: 1;
+  padding: 0 var(--sp-5);
 }
 
 .menu a {
+  position: relative;
   text-decoration: none;
-  color: #333;
-  font-weight: bold;
-  font-size: 18px;
-}
-
-.auth { display: flex; align-items: center; gap: 12px; }
-
-.btn-outline {
+  color: #ffffff;
   font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  border: 1px solid #333;
-  background: transparent;
-  color: #333;
+  font-size: 15px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 8px;
+  transition: all var(--transition-fast) var(--ease);
 }
-.btn-outline:hover { background: #f3f3f3; }
+
+.menu a::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 3px;
+  background: linear-gradient(90deg, #F97316, #EA580C);
+  border-radius: 2px;
+  transition: transform var(--transition-base) var(--ease);
+}
+
+.menu a:hover {
+  color: #F97316;
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.menu a:hover::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.menu a.router-link-active {
+  color: #F97316;
+  font-weight: 700;
+  background: rgba(249, 115, 22, 0.15);
+}
+
+.menu a.router-link-active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.auth {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.btn-logout {
+  background: var(--danger-600);
+  border: 1px solid var(--danger-600);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: filter .15s, transform .05s, background .15s;
+}
+
+.btn-logout:hover {
+  background: var(--danger-700);
+  filter: brightness(.98);
+}
+
+.btn-logout:active {
+  transform: translateY(1px);
+}
+
+.btn-logout:focus-visible {
+  outline: 3px solid rgba(220,38,38,.35);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+    padding: var(--sp-3) var(--sp-4);
+  }
+  
+  .menu {
+    order: 3;
+    width: 100%;
+    justify-content: space-around;
+    padding: var(--sp-3) 0 0;
+    margin-top: var(--sp-3);
+    border-top: 1px solid var(--c-border);
+    gap: var(--sp-1);
+  }
+  
+  .menu a {
+    font-size: 13px;
+    padding: var(--sp-2);
+  }
+}
 </style>

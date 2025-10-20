@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="page-container">
     <AdminNavbar />
 
     <div class="wrap">
@@ -95,6 +95,8 @@
       </div>
 
     </div>
+    
+    <SiteFooter />
   </div>
 </template>
 
@@ -102,6 +104,7 @@
 import { ref, onMounted } from 'vue'
 import api from '@/lib/api'
 import AdminNavbar from '@/components/AdminNavbar.vue'
+import SiteFooter from '@/components/SiteFooter.vue'
 
 const summary = ref({ today: {}, month: {}, all: {} })
 const daily = ref([])
@@ -167,51 +170,145 @@ function formatDate(d) {
 </script>
 
 <style scoped>
-.wrap { padding: 20px; font-family: 'Kanit', sans-serif; }
-h1 { margin-bottom: 12px; }
+.page-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.wrap {
+  flex: 1 0 auto;
+  width: 100%;
+  padding: var(--sp-8) var(--sp-4);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 var(--sp-5);
+  color: var(--c-text);
+}
 
 .grid-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-6);
 }
+
 .card {
-  background: #fff; border: 1px solid #eee; border-radius: 14px;
-  padding: 16px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  background: var(--c-card);
+  border-radius: var(--radius);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow-1);
+  transition: all var(--transition-fast) var(--ease);
 }
-.card-title { color: #666; font-size: 14px; }
-.num { font-size: 26px; font-weight: 700; margin-top: 6px; }
-.muted { color: #777; font-size: 13px; }
+
+.card:hover {
+  box-shadow: var(--shadow-2);
+  transform: translateY(-2px);
+}
+
+.card-title {
+  color: var(--c-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: var(--sp-2);
+}
+
+.num {
+  font-size: 26px;
+  font-weight: 700;
+  margin-top: var(--sp-2);
+  color: var(--c-primary);
+}
+
+.muted {
+  color: var(--c-text-muted);
+  font-size: 13px;
+  margin-top: var(--sp-1);
+}
 
 .grid-tables {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-}
-@media (max-width: 900px) {
-  .grid-tables { grid-template-columns: 1fr; }
-}
-.panel {
-  background: #fff; border: 1px solid #eee; border-radius: 14px;
-  overflow: hidden;
-}
-.panel-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 14px; border-bottom: 1px solid #f0f0f0; background: #fafafa;
-}
-.panel-head h3 { margin: 0; font-size: 16px; }
-.panel-head .right select {
-  padding: 6px 8px; border: 1px solid #ddd; border-radius: 8px; background: #fff;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
 }
 
-.table { width: 100%; border-collapse: collapse; }
+@media (max-width: 900px) {
+  .grid-tables {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--c-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-1);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-4);
+  border-bottom: 1px solid var(--c-border);
+  background: var(--c-bg-soft);
+}
+
+.panel-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.panel-head .right select {
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-card);
+  outline: none;
+  transition: all var(--transition-fast) var(--ease);
+}
+
+.panel-head .right select:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
 .table thead th {
-  text-align: left; font-weight: 600; background: #fcfcfc;
-  border-bottom: 1px solid #eee; padding: 10px 12px;
+  text-align: left;
+  font-weight: 600;
+  background: var(--c-bg-soft);
+  border-bottom: 1px solid var(--c-border);
+  padding: var(--sp-3);
+  color: var(--c-text);
 }
+
 .table tbody td {
-  border-bottom: 1px solid #f3f3f3; padding: 10px 12px;
+  border-bottom: 1px solid var(--c-border-light);
+  padding: var(--sp-3);
+  color: var(--c-text);
 }
-.right { text-align: right; }
-.center { text-align: center; }
+
+.table tbody tr:hover {
+  background: var(--c-bg-soft);
+}
+
+.right {
+  text-align: right;
+}
+
+.center {
+  text-align: center;
+}
 </style>

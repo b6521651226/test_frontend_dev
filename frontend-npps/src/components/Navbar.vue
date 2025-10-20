@@ -38,7 +38,7 @@ function doLogout() {
         <router-link v-if="state.role === 'admin'" to="/admin/dashboard" class="dash-link">
           แดชบอร์ด
         </router-link>
-        <button @click="doLogout" class="btn-outline">ออกจากระบบ</button>
+        <button @click="doLogout" class="btn-logout">ออกจากระบบ</button>
       </div>
     </div>
   </header>
@@ -46,61 +46,198 @@ function doLogout() {
 
 <style scoped>
 .navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 30px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
-  font-family: 'Kanit', sans-serif;
+  padding: var(--sp-4) var(--sp-6);
+  min-height: 68px;
+  background: var(--bg-navbar);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-bottom: 2px solid rgba(220, 38, 38, 0.15);
 }
 
-.logo img { height: 50px; }
+.logo img {
+  height: 48px;
+  width: auto;
+  display: block;
+}
 
 .menu {
   display: flex;
-  gap: 40px;
+  gap: var(--sp-2);
   justify-content: center;
   align-items: center;
   flex: 1;
+  padding: 0 var(--sp-5);
 }
 
 .menu a {
+  position: relative;
   text-decoration: none;
-  color: #333;
-  font-weight: bold;
-  font-size: 18px;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: 8px;
+  transition: all var(--transition-fast) var(--ease);
 }
 
-.cart-icon { font-size: 22px; }
+.menu a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 70%;
+  height: 3px;
+  background: #DC2626;
+  border-radius: 2px;
+  transition: transform var(--transition-base) var(--ease);
+}
 
-/* 🔽 เพิ่มสไตล์โซน Auth */
-.auth { display: flex; align-items: center; gap: 12px; }
-.auth-logged { display: flex; align-items: center; gap: 10px; }
+.menu a:hover {
+  color: #EF4444;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.menu a:hover::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.menu a.router-link-active {
+  color: #DC2626;
+  font-weight: 700;
+  background: rgba(220, 38, 38, 0.15);
+}
+
+.menu a.router-link-active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+
+.cart-icon {
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  color: #ffffff;
+}
+
+.cart-icon:hover {
+  transform: scale(1.1);
+  background: rgba(255,255,255,.2);
+}
+
+.auth {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.auth-logged {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
 
 .badge {
-  background: #222;
+  background: #DC2626;
   color: #fff;
-  font-size: 12px;
-  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
   border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
 }
 
 .dash-link {
   text-decoration: none;
-  color: #333;
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: 8px;
+  transition: all var(--transition-fast) var(--ease);
+  background: rgba(220, 38, 38, 0.15);
+  border: 1px solid rgba(220, 38, 38, 0.3);
 }
 
-.btn, .btn-outline {
-  font-weight: 600;
-  padding: 6px 12px;
-  border-radius: 6px;
+.dash-link:hover {
+  background: rgba(220, 38, 38, 0.25);
+  border-color: #DC2626;
+}
+
+.btn {
+  background: linear-gradient(90deg, #1E3A8A, #1E40AF);
+  color: #fff;
+  border: none;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 10px;
   cursor: pointer;
-  border: 1px solid #333;
+  transition: all var(--transition-fast) var(--ease);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
 }
 
-.btn { background: #333; color: #fff; }
-.btn-outline { background: transparent; color: #333; }
-.btn-outline:hover { background: #f3f3f3; }
+.btn:hover {
+  background: linear-gradient(90deg, #1E40AF, #2563EB);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.btn-logout {
+  background: var(--danger-600);
+  border: 1px solid var(--danger-600);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: filter .15s, transform .05s, background .15s;
+}
+
+.btn-logout:hover {
+  background: var(--danger-700);
+  filter: brightness(.98);
+}
+
+.btn-logout:active {
+  transform: translateY(1px);
+}
+
+.btn-logout:focus-visible {
+  outline: 3px solid rgba(220,38,38,.35);
+  outline-offset: 2px;
+}
+
+@media (max-width: 768px) {
+  .navbar {
+    flex-wrap: wrap;
+    padding: var(--sp-3) var(--sp-4);
+  }
+  
+  .menu {
+    order: 3;
+    width: 100%;
+    justify-content: space-around;
+    padding: var(--sp-3) 0 0;
+    margin-top: var(--sp-3);
+    border-top: 1px solid var(--c-border);
+    gap: var(--sp-1);
+  }
+  
+  .menu a {
+    font-size: 13px;
+    padding: var(--sp-2);
+  }
+}
 </style>

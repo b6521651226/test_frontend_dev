@@ -86,7 +86,7 @@ const submit = async () => {
               required
               minlength="6"
             />
-            <button type="button" class="toggle" @click="showPwd = !showPwd">
+            <button type="button" class="btn ghost toggle" @click="showPwd = !showPwd">
               {{ showPwd ? 'ซ่อน' : 'แสดง' }}
             </button>
           </div>
@@ -106,140 +106,212 @@ const submit = async () => {
 </template>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap');
-
 .page {
-  min-height: 80vh;
-  display: grid;
-  place-items: center;
-  background: #f7f7f8;
-  padding: 24px;
-  font-family: 'Kanit', sans-serif;
+  min-height: 100dvh;
+  background: linear-gradient(135deg, rgba(248, 250, 252, 1) 0%, rgba(226, 232, 240, 0.5) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-8) var(--sp-4);
 }
 
 .card {
   width: 100%;
   max-width: 460px;
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 16px;
-  padding: 28px;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.06);
+  background: var(--c-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  padding: var(--sp-7) var(--sp-6);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, var(--c-primary), var(--c-accent));
 }
 
 .brand {
   display: flex;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-5);
 }
+
 .brand img {
-  height: 56px;
+  height: 64px;
+  border-radius: 12px;
+  padding: var(--sp-2);
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.1), rgba(220, 38, 38, 0.08));
 }
 
 h2 {
   text-align: center;
-  margin: 6px 0 6px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 var(--sp-2);
+  color: var(--c-text);
 }
+
 .sub {
   text-align: center;
-  color: #666;
-  margin-bottom: 16px;
-  font-size: 14px;
+  color: var(--c-text-muted);
+  margin: 0 0 var(--sp-6);
+  font-size: 15px;
 }
 
 .alert {
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 10px;
   font-size: 14px;
-  margin-bottom: 12px;
+  font-weight: 600;
+  margin-bottom: var(--sp-4);
+  border-width: 1px;
+  border-style: solid;
 }
+
 .alert.error {
-  background: #ffe9e9;
-  color: #b40b0b;
-  border: 1px solid #ffd1d1;
+  background: rgba(220,38,38,.1);
+  color: #dc2626;
+  border-color: rgba(220,38,38,.2);
 }
+
 .alert.success {
-  background: #eaf9ed;
-  color: #1b7f3a;
-  border: 1px solid #d1f0d9;
+  background: rgba(34,197,94,.1);
+  color: #16a34a;
+  border-color: rgba(34,197,94,.2);
 }
 
 .form {
-  display: grid;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
 }
 
 label {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
   font-size: 14px;
-  color: #333;
+  font-weight: 600;
+  color: var(--c-text);
 }
 
 input {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #ddd;
+  height: 48px;
+  border: 1px solid var(--c-border);
   border-radius: 10px;
-  font-size: 15px;
+  padding: 0 var(--sp-4);
   outline: none;
-  transition: border 0.15s ease, box-shadow 0.15s ease;
-  background: #fff;
-}
-input:focus {
-  border-color: #f1c40f;
-  box-shadow: 0 0 0 3px rgba(241,196,15,0.15);
+  font-size: 15px;
+  background: var(--c-bg);
+  transition: all var(--transition-fast) var(--ease);
 }
 
-.pwd-label { margin-bottom: 4px; }
+input::placeholder {
+  color: var(--c-text-muted);
+}
+
+input:hover {
+  border-color: var(--c-text-muted);
+}
+
+input:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15);
+}
+
+.pwd-label {
+  margin-bottom: 0;
+}
+
 .pwd {
   position: relative;
   display: flex;
   align-items: center;
 }
-.pwd input { padding-right: 70px; }
+
+.pwd input {
+  padding-right: 80px;
+}
+
 .toggle {
   position: absolute;
-  right: 8px;
-  padding: 6px 10px;
-  border: 1px solid #eee;
-  background: #fafafa;
-  border-radius: 8px;
-  font-size: 12px;
-  cursor: pointer;
+  right: var(--sp-2);
+  height: 34px;
+  padding: 0 var(--sp-3);
+  font-size: 13px;
 }
-.toggle:hover { background: #f0f0f0; }
 
 .submit {
-  margin-top: 6px;
+  margin-top: var(--sp-3);
   width: 100%;
-  padding: 12px 14px;
+  height: 48px;
   border: none;
   border-radius: 10px;
-  background: #f1c40f;
-  font-weight: 600;
+  background: linear-gradient(90deg, #1E3A8A, #1E40AF);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 16px;
   cursor: pointer;
-  transition: filter 0.15s ease, transform 0.02s ease;
+  transition: all var(--transition-base) var(--ease);
+  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.25);
 }
-.submit:hover { filter: brightness(0.95); }
-.submit:active { transform: translateY(1px); }
+.submit:hover:not(:disabled) {
+  background: linear-gradient(90deg, #1E40AF, #2563EB);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+.submit:active:not(:disabled) {
+  transform: translateY(0);
+}
 .submit:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 .foot {
-  margin-top: 14px;
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
+  border-top: 1px solid var(--c-border);
   text-align: center;
   font-size: 14px;
-  color: #555;
+  color: var(--c-text-muted);
 }
+
 .foot a {
-  color: #000;
-  font-weight: 600;
+  color: var(--c-primary);
+  font-weight: 700;
   text-decoration: none;
-  border-bottom: 1px dashed #bbb;
+  margin-left: var(--sp-1);
+  transition: color var(--transition-fast) var(--ease);
 }
-.foot a:hover { color: #333; }
+
+.foot a:hover {
+  color: var(--c-primary-700);
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .page {
+    padding: var(--sp-5) var(--sp-3);
+  }
+  
+  .card {
+    padding: var(--sp-6) var(--sp-5);
+  }
+  
+  .brand img {
+    height: 56px;
+  }
+  
+  h2 {
+    font-size: 22px;
+  }
+}
 </style>

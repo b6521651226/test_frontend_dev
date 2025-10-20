@@ -1,3 +1,7 @@
+<script setup>
+import { companyInfo, contactInfo } from '@/data/siteMeta'
+</script>
+
 <template>
   <div class="page">
     <div class="wrap">
@@ -18,21 +22,21 @@
               <span class="icon">✉️</span>
               <div class="meta">
                 <div class="label">อีเมล</div>
-                <a href="mailto:npps_supply@gmail.com" class="value">npps_supply@gmail.com</a>
+                <a :href="`mailto:${contactInfo.email}`" class="value">{{ contactInfo.email }}</a>
               </div>
             </li>
             <li>
               <span class="icon">📞</span>
               <div class="meta">
                 <div class="label">โทรศัพท์</div>
-                <a href="tel:0982800692" class="value">098-280-0692</a>
+                <a :href="contactInfo.phoneLink" class="value">{{ contactInfo.phoneFormatted }}</a>
               </div>
             </li>
             <li>
               <span class="icon">📍</span>
               <div class="meta">
                 <div class="label">ที่อยู่</div>
-                <div class="value">55/35 หมู่บ้านแกรนด์กิตติยา ต.คลองโยง อ.พุทธมณฑล จ.นครปฐม 73170</div>
+                <div class="value">{{ contactInfo.address.full }}</div>
               </div>
             </li>
           </ul>
@@ -45,7 +49,7 @@
           <div class="map-wrap">
             <iframe
               class="map"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1151.71677654094!2d100.29700814674392!3d13.845158664909833!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30e292fa4d0848a3%3A0x29764281746f38e2!2s35%2C%20Amphoe%20Phutthamonthon%2C%20Chang%20Wat%20Nakhon%20Pathom%2073170!5e0!3m2!1sen!2sth!4v1700000000000!5m2!1sen!2sth"
+              :src="contactInfo.mapUrl"
               width="100%"
               height="100%"
               style="border:0;"
@@ -60,57 +64,171 @@
   </div>
 </template>
 
-<script setup>
-// ไม่มี logic ในหน้านี้
-</script>
-
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap');
+.page {
+  background: var(--c-bg);
+  min-height: 100vh;
+}
 
-.page { background:#ffffff; min-height:100vh; }
-.wrap { max-width:1080px; margin:24px auto; padding:0 16px; font-family:'Kanit',sans-serif; }
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--sp-8) var(--sp-4);
+}
 
-.head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px; }
-.title-wrap h1 { margin:0; font-size:24px; font-weight:700; }
-.title-wrap .sub { margin:2px 0 0; color:#6b7280; font-size:14px; }
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+
+.title-wrap h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+.title-wrap .sub {
+  margin: var(--sp-1) 0 0;
+  color: var(--c-text-muted);
+  font-size: 14px;
+}
 
 .grid {
-  display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
+  align-items: start;
 }
-@media (max-width: 960px) { .grid { grid-template-columns:1fr; } }
+
+@media (max-width: 960px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 .card {
-  background:#fff; border:1px solid #eee; border-radius:14px;
-  box-shadow:0 6px 16px rgba(0,0,0,.04); padding:16px;
+  background: var(--c-card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-1);
+  padding: var(--sp-5);
+  transition: box-shadow var(--transition-fast) var(--ease);
 }
-.card-title { margin:0 0 10px; font-size:16px; font-weight:700; }
 
-/* Contact list style (เหมือนบัตรรายการในหน้าอื่น) */
-.contact-list { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
-.contact-list li {
-  display:flex; gap:12px; align-items:flex-start;
-  background:#fff; border:1px solid #eee; border-radius:10px; padding:10px 12px;
+.card:hover {
+  box-shadow: var(--shadow-2);
 }
-.icon { font-size:18px; line-height:1; }
-.meta { display:grid; gap:4px; }
-.label { color:#6b7280; font-size:13px; }
-.value { font-weight:700; color:#111827; text-decoration:none; }
-.value:hover { text-decoration:underline; }
+
+.card-title {
+  margin: 0 0 var(--sp-3);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+}
+
+/* Contact list */
+.contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.contact-list li {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  background: var(--c-bg-soft);
+  border-radius: 10px;
+  padding: var(--sp-3);
+  transition: all var(--transition-fast) var(--ease);
+}
+
+.contact-list li:hover {
+  background: var(--c-border-light);
+  transform: translateX(2px);
+}
+
+.icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.meta {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.label {
+  color: var(--c-text-muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.value {
+  font-weight: 700;
+  color: var(--c-text);
+  text-decoration: none;
+  transition: color var(--transition-fast) var(--ease);
+}
+
+.value:hover {
+  color: var(--c-primary);
+  text-decoration: underline;
+}
 
 /* Map */
 .map-wrap {
-  width:100%; height:320px; border-radius:12px; overflow:hidden;
-  border:1px solid #eee; background:#fafafa;
+  width: 100%;
+  height: 320px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  background: var(--c-bg-soft);
+  box-shadow: var(--shadow-1);
 }
-.map { display:block; width:100%; height:100%; }
 
-/* ปุ่มธีม (เผื่ออนาคตต้องเพิ่มปุ่ม) */
-.btn{
-  padding:10px 12px; border-radius:10px; border:1px solid #111827; background:#111827; color:#fff;
-  cursor:pointer; font-weight:600; transition:filter .15s, background .15s, color .15s;
+.map {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-.btn:hover{ filter:brightness(.95); }
-.btn.primary{ background:#f1c40f; border-color:#f1c40f; color:#111827; }
-.btn.ghost{ background:#fff; color:#111827; border-color:#e5e7eb; }
-.btn.ghost:hover{ background:#f9fafb; }
+
+/* Buttons (เผื่อใช้ในอนาคต) */
+.btn {
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: 10px;
+  border: 1px solid var(--c-primary);
+  background: var(--c-primary);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all var(--transition-fast) var(--ease);
+}
+
+.btn:hover {
+  background: var(--c-primary-700);
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+
+.btn.ghost {
+  background: transparent;
+  color: var(--c-text);
+  border-color: var(--c-border);
+}
+
+.btn.ghost:hover {
+  background: var(--c-bg-soft);
+  transform: none;
+}
 </style>

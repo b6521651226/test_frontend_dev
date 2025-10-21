@@ -41,9 +41,9 @@ function doLogout() {
   align-items: center;
   padding: var(--sp-4) var(--sp-6);
   min-height: 68px;
-  background: var(--bg-navbar);
+  background: #1E293B;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-bottom: 2px solid rgba(249, 115, 22, 0.15);
+  border-bottom: 2px solid rgba(220, 38, 38, 0.15);
 }
 
 .logo img {
@@ -67,7 +67,7 @@ function doLogout() {
   color: #ffffff;
   font-weight: 600;
   font-size: 15px;
-  padding: var(--sp-3) var(--sp-4);
+  padding: var(--sp-2) var(--sp-4);
   border-radius: 8px;
   transition: all var(--transition-fast) var(--ease);
 }
@@ -75,19 +75,19 @@ function doLogout() {
 .menu a::after {
   content: '';
   position: absolute;
-  bottom: 0;
+  bottom: -2px;
   left: 50%;
   transform: translateX(-50%) scaleX(0);
-  width: 80%;
+  width: 70%;
   height: 3px;
-  background: linear-gradient(90deg, #F97316, #EA580C);
+  background: #DC2626;
   border-radius: 2px;
   transition: transform var(--transition-base) var(--ease);
 }
 
 .menu a:hover {
-  color: #F97316;
-  background: rgba(249, 115, 22, 0.1);
+  color: #EF4444;
+  background: rgba(220, 38, 38, 0.1);
 }
 
 .menu a:hover::after {
@@ -95,9 +95,9 @@ function doLogout() {
 }
 
 .menu a.router-link-active {
-  color: #F97316;
+  color: #DC2626;
   font-weight: 700;
-  background: rgba(249, 115, 22, 0.15);
+  background: rgba(220, 38, 38, 0.15);
 }
 
 .menu a.router-link-active::after {
@@ -145,15 +145,38 @@ function doLogout() {
   .menu {
     order: 3;
     width: 100%;
-    justify-content: space-around;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
     padding: var(--sp-3) 0 0;
     margin-top: var(--sp-3);
-    border-top: 1px solid var(--c-border);
-    gap: var(--sp-1);
+    border-top: 1px solid rgba(220, 38, 38, 0.2);
+    gap: var(--sp-2);
   }
   
   .menu a {
     font-size: 13px;
+    padding: var(--sp-2) var(--sp-3);
+    white-space: nowrap;
+  }
+  
+  .btn-logout {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: var(--sp-2) var(--sp-3);
+  }
+  
+  .logo img {
+    height: 40px;
+  }
+  
+  .menu a {
+    font-size: 12px;
     padding: var(--sp-2);
   }
 }

@@ -442,4 +442,136 @@ async function deleteUser(id) {
   margin-top: var(--sp-1);
   font-weight: 600;
 }
+
+/* ---------- Responsive ---------- */
+/* Tablet & Below */
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-6) var(--sp-4);
+  }
+
+  .head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .head .btn {
+    width: 100%;
+  }
+
+  .card {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 800px;
+  }
+
+  .sheet {
+    width: min(720px, 100%);
+    padding: var(--sp-4);
+  }
+
+  .row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .sub {
+    font-size: 13px;
+  }
+
+  .sheet {
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .sheet-head {
+    margin-bottom: var(--sp-3);
+  }
+
+  .sheet-head h3 {
+    font-size: 16px;
+  }
+
+  .table {
+    min-width: 700px;
+    font-size: 14px;
+  }
+
+  .row-actions {
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .row-actions .btn {
+    width: 100%;
+  }
+
+  .form-grid {
+    gap: var(--sp-3);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions .btn {
+    width: 100%;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .wrap {
+    padding: var(--sp-4) var(--sp-2);
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .sub {
+    font-size: 12px;
+  }
+
+  .sheet {
+    padding: var(--sp-3);
+  }
+
+  .sheet-head h3 {
+    font-size: 15px;
+  }
+
+  .table {
+    font-size: 13px;
+  }
+
+  .table th,
+  .table td {
+    padding: var(--sp-2);
+  }
+
+  .form-grid input,
+  .form-grid textarea,
+  .form-grid select {
+    padding: var(--sp-2);
+  }
+
+  .form-grid label {
+    font-size: 13px;
+  }
+}
 </style>

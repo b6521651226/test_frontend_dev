@@ -81,6 +81,11 @@
   --transition-fast: 150ms;
   --transition-base: 250ms;
   --transition-slow: 350ms;
+  
+  /* 📱 Responsive */
+  --container-max: 1080px;
+  --pad: 16px;
+  --gap: 12px;
 }
 
 /* ========================================
@@ -327,4 +332,50 @@ table tbody tr:hover {
 .slide-y-leave-to {
   opacity: 0;
   transform: translateY(10px);
+}
+
+/* ========================================
+   📱 Responsive Utilities
+   ======================================== */
+
+/* Container */
+.container {
+  max-width: var(--container-max);
+  margin: 24px auto;
+  padding: 0 var(--pad);
+}
+
+/* Responsive images */
+img, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Table wrapper for horizontal scroll */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Responsive grid */
+.grid-responsive {
+  display: grid;
+  gap: var(--gap);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (max-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-responsive {
+    grid-template-columns: 1fr;
+  }
+  
+  .btn.block-sm {
+    width: 100%;
+  }
 }

@@ -104,9 +104,92 @@ import { companyInfo, contactInfo } from '@/data/siteMeta'
   align-items: start;
 }
 
-@media (max-width: 960px) {
+/* Tablet & Below */
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-6) var(--sp-4);
+  }
+
   .grid {
     grid-template-columns: 1fr;
+    gap: var(--sp-4);
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+
+  h1 {
+    font-size: 22px;
+  }
+
+  .sub {
+    font-size: 13px;
+  }
+
+  .card {
+    padding: var(--sp-4);
+  }
+
+  .card-title {
+    font-size: 15px;
+    margin-bottom: var(--sp-2);
+  }
+
+  .contact-list {
+    gap: var(--sp-2);
+  }
+
+  .contact-list li {
+    flex-direction: column;
+    gap: var(--sp-2);
+    padding: var(--sp-2);
+  }
+
+  .map-wrap {
+    height: 300px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .wrap {
+    padding: var(--sp-4) var(--sp-2);
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .sub {
+    font-size: 12px;
+  }
+
+  .card {
+    padding: var(--sp-3);
+  }
+
+  .card-title {
+    font-size: 14px;
+  }
+
+  .contact-list li {
+    padding: var(--sp-2);
+  }
+
+  .label {
+    font-size: 12px;
+  }
+
+  .value {
+    font-size: 13px;
+  }
+
+  .map-wrap {
+    height: 250px;
   }
 }
 

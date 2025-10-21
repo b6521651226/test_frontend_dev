@@ -164,4 +164,23 @@ import { companyInfo, contactInfo, quickLinks, copyright } from '@/data/siteMeta
     padding: 16px;
   }
 }
+
+@media (max-width: 480px) {
+  .footer-container {
+    padding: 20px 12px;
+    gap: 20px;
+  }
+  
+  .footer-heading {
+    font-size: 15px;
+  }
+  
+  .footer-text, .footer-list li {
+    font-size: 13px;
+  }
+  
+  .footer-bottom p {
+    font-size: 12px;
+  }
+}
 </style>

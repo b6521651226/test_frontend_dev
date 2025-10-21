@@ -767,4 +767,167 @@ async function forceDelete(order) {
 .fade-leave-to {
   opacity: 0;
 }
+
+/* ---------- Responsive ---------- */
+/* Tablet & Below */
+@media (max-width: 1024px) {
+  .container {
+    padding: var(--sp-6) var(--sp-4);
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search {
+    max-width: 100%;
+    flex: 1 1 auto;
+    margin-right: 0;
+  }
+
+  .select {
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--sp-4);
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .container {
+    padding: var(--sp-5) var(--sp-3);
+  }
+
+  .title-wrap h1 {
+    font-size: 22px;
+  }
+
+  .title-wrap .sub {
+    font-size: 13px;
+  }
+
+  .row-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .row-head .left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .row-head .right {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .row-head .meta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-1);
+  }
+
+  .row-head .btn {
+    width: 100%;
+  }
+
+  .details {
+    padding: var(--sp-4);
+  }
+
+  .details h4 {
+    font-size: 14px;
+  }
+
+  .details p {
+    font-size: 13px;
+  }
+
+  .item-list .item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .item .thumb {
+    width: 56px;
+    height: 56px;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .actions .btn {
+    width: 100%;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .container {
+    padding: var(--sp-4) var(--sp-2);
+  }
+
+  .title-wrap h1 {
+    font-size: 20px;
+  }
+
+  .title-wrap .sub {
+    font-size: 12px;
+  }
+
+  .card {
+    padding: var(--sp-3);
+  }
+
+  .code {
+    font-size: 13px;
+  }
+
+  .name {
+    font-size: 14px;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+
+  .when,
+  .total {
+    font-size: 12px;
+  }
+
+  .details {
+    padding: var(--sp-3);
+  }
+
+  .details h4 {
+    font-size: 13px;
+  }
+
+  .details p {
+    font-size: 12px;
+  }
+
+  .item .thumb {
+    width: 48px;
+    height: 48px;
+  }
+
+  .btn {
+    font-size: 13px;
+    padding: var(--sp-2) var(--sp-3);
+  }
+}
 </style>

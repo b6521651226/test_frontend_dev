@@ -321,6 +321,12 @@ function toggleMode(toAdmin) {
   text-decoration: underline;
 }
 
+@media (max-width: 768px) {
+  .card {
+    max-width: 440px;
+  }
+}
+
 @media (max-width: 480px) {
   .page {
     padding: var(--sp-5) var(--sp-3);

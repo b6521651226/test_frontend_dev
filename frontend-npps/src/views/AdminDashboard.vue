@@ -237,9 +237,127 @@ h1 {
   gap: var(--sp-5);
 }
 
-@media (max-width: 900px) {
+/* Tablet & Below */
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-6) var(--sp-4);
+  }
+
+  .grid-cards {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
   .grid-tables {
     grid-template-columns: 1fr;
+    gap: var(--sp-4);
+  }
+
+  .panel {
+    overflow-x: auto;
+  }
+
+  .table {
+    min-width: 500px;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+
+  h1 {
+    font-size: 22px;
+    margin-bottom: var(--sp-4);
+  }
+
+  .grid-cards {
+    grid-template-columns: 1fr;
+    gap: var(--sp-3);
+  }
+
+  .card {
+    padding: var(--sp-4);
+  }
+
+  .card-title {
+    font-size: 13px;
+  }
+
+  .num {
+    font-size: 24px;
+  }
+
+  .grid-tables {
+    gap: var(--sp-3);
+  }
+
+  .panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-2);
+  }
+
+  .panel-head h3 {
+    font-size: 15px;
+  }
+
+  .panel-head .right {
+    width: 100%;
+  }
+
+  .panel-head .right select {
+    width: 100%;
+  }
+
+  .table {
+    min-width: 450px;
+    font-size: 14px;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .wrap {
+    padding: var(--sp-4) var(--sp-2);
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .card {
+    padding: var(--sp-3);
+  }
+
+  .card-title {
+    font-size: 12px;
+  }
+
+  .num {
+    font-size: 22px;
+  }
+
+  .muted {
+    font-size: 12px;
+  }
+
+  .panel-head {
+    padding: var(--sp-3);
+  }
+
+  .panel-head h3 {
+    font-size: 14px;
+  }
+
+  .table {
+    font-size: 13px;
+  }
+
+  .table th,
+  .table td {
+    padding: var(--sp-2);
   }
 }
 

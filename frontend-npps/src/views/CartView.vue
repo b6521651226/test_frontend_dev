@@ -350,4 +350,89 @@ async function removeItem(id) {
   margin-top: var(--sp-4);
   font-weight: 600;
 }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-6) var(--sp-4);
+  }
+  
+  .cart-body {
+    flex-direction: column;
+    gap: var(--sp-5);
+  }
+  
+  .items-col {
+    flex: 1;
+  }
+  
+  .summary-col {
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+  
+  .head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+  
+  .item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .img {
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+  }
+  
+  .info {
+    padding: 0;
+  }
+  
+  .actions {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: var(--sp-3);
+    border-top: 1px solid var(--c-border-light);
+  }
+}
+
+@media (max-width: 480px) {
+  .title-wrap h1 {
+    font-size: 20px;
+  }
+  
+  .qty {
+    gap: var(--sp-1);
+  }
+  
+  .qty button {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  
+  .qty input {
+    width: 48px;
+    padding: 4px;
+    font-size: 14px;
+  }
+  
+  .actions {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  
+  .btn.sm {
+    width: 100%;
+  }
+}
 </style>

@@ -228,15 +228,42 @@ function doLogout() {
   .menu {
     order: 3;
     width: 100%;
-    justify-content: space-around;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
     padding: var(--sp-3) 0 0;
     margin-top: var(--sp-3);
-    border-top: 1px solid var(--c-border);
-    gap: var(--sp-1);
+    border-top: 1px solid rgba(220, 38, 38, 0.2);
+    gap: var(--sp-2);
   }
   
   .menu a {
     font-size: 13px;
+    padding: var(--sp-2) var(--sp-3);
+    white-space: nowrap;
+  }
+  
+  .auth {
+    gap: var(--sp-2);
+  }
+  
+  .btn, .btn-logout {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: var(--sp-2) var(--sp-3);
+  }
+  
+  .logo img {
+    height: 40px;
+  }
+  
+  .menu a {
+    font-size: 12px;
     padding: var(--sp-2);
   }
 }

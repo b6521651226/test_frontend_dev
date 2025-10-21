@@ -539,10 +539,29 @@ async function confirmReceived(o) {
   grid-template-columns: 160px 150px 120px 1fr;
   align-items: center;
   gap: var(--sp-3);
-  padding: var(--sp-3) 0;
+  gap: var(--sp-2);
+}
+
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-6) var(--sp-4);
+  }
+  
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .tabs button {
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 768px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+  
   .order-info-row {
     grid-template-columns: 1fr;
     gap: var(--sp-2);
@@ -550,6 +569,31 @@ async function confirmReceived(o) {
   
   .actions-row {
     justify-content: flex-start !important;
+    flex-direction: column;
+  }
+  
+  .actions-row .btn {
+    width: 100%;
+  }
+  
+  .order-detail-sheet {
+    width: 100% !important;
+    max-width: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .title-wrap h1 {
+    font-size: 20px;
+  }
+  
+  .tabs button {
+    font-size: 13px;
+    padding: var(--sp-2) var(--sp-3);
+  }
+  
+  .card {
+    padding: var(--sp-3);
   }
 }
 

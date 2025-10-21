@@ -265,6 +265,16 @@
   box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-6) var(--sp-5);
+  }
+  
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 768px) {
   .hero {
     min-height: 50vh;
@@ -292,6 +302,34 @@
   .btn {
     width: 100%;
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero {
+    min-height: 40vh;
+  }
+  
+  .hero-inner {
+    padding: var(--sp-5) var(--sp-3);
+  }
+  
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+  
+  .card {
+    padding: var(--sp-4);
+  }
+  
+  .metric {
+    padding: var(--sp-4);
+  }
+  
+  .metric .icon {
+    width: 60px;
+    height: 60px;
+    font-size: 36px;
   }
 }
 </style>

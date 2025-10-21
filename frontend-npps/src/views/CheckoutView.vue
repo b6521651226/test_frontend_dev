@@ -359,9 +359,38 @@ function closeSuccess() {
   align-items: start;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 1024px) {
   .grid {
     grid-template-columns: 1fr;
+    gap: var(--sp-5);
+  }
+  
+  .wrap {
+    padding: var(--sp-6) var(--sp-4);
+  }
+}
+
+@media (max-width: 768px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-3);
+  }
+  
+  .card {
+    padding: var(--sp-4);
+  }
+}
+
+@media (max-width: 480px) {
+  .title-wrap h1 {
+    font-size: 20px;
+  }
+  
+  .card {
+    padding: var(--sp-3);
+  }
+  
+  .card-title {
+    font-size: 15px;
   }
 }
 

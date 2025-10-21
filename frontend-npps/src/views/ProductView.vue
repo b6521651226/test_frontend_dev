@@ -412,6 +412,16 @@ async function addToCart(product) {
   border-radius: 8px;
 }
 
+@media (max-width: 1024px) {
+  .wrap {
+    padding: var(--sp-5) var(--sp-4);
+  }
+  
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .head {
     gap: var(--sp-4);
@@ -426,11 +436,30 @@ async function addToCart(product) {
   .search {
     width: 100%;
     max-width: none;
+    min-width: 0;
   }
   
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: var(--sp-4);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--sp-3);
+  }
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    padding: var(--sp-4) var(--sp-3);
+  }
+  
+  .title-wrap h1 {
+    font-size: 24px;
+  }
+  
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card {
+    padding: var(--sp-3);
   }
 }
 </style>

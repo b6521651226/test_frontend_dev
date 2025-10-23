@@ -85,6 +85,20 @@
 .hero-overlay {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/images/npps_bg02.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.hero-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+  z-index: 0;
 }
 
 .hero-inner {

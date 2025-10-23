@@ -72,6 +72,29 @@
 
           <transition name="fade">
             <div v-if="expanded === o.order_id" class="details">
+              <!-- ✅ 1. บล็อกสินค้า - ขึ้นบนสุด -->
+              <div class="items">
+                <h4>สินค้าในออเดอร์</h4>
+                <ul class="items-list">
+                  <li
+                    v-for="it in o.items"
+                    :key="it.order_item_id"
+                    class="item"
+                  >
+                    <img :src="apiBase + it.image_url" alt="" />
+                    <div class="meta">
+                      <div class="name">{{ it.product_name }}</div>
+                      <div class="sub">
+                        x{{ it.quantity }}
+                        <span v-if="it.product_option" class="note">({{ it.product_option }})</span>
+                      </div>
+                    </div>
+                    <div class="price">{{ format(it.price * it.quantity) }} ฿</div>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- ✅ 2. ข้อมูลผู้รับ / ชำระเงิน / จัดส่ง - ถัดลงมา -->
               <div class="grid">
                 <div class="block">
                   <h4>ข้อมูลผู้รับ</h4>
@@ -101,28 +124,7 @@
                 </div>
               </div>
 
-              <!-- ✅ บล็อกสินค้า -->
-              <div class="items">
-                <h4>สินค้าในออเดอร์</h4>
-                <ul class="items-list">
-                  <li
-                    v-for="it in o.items"
-                    :key="it.order_item_id"
-                    class="item"
-                  >
-                    <img :src="apiBase + it.image_url" alt="" />
-                    <div class="meta">
-                      <div class="name">{{ it.product_name }}</div>
-                      <div class="sub">
-                        x{{ it.quantity }}
-                        <span v-if="it.product_option" class="note">({{ it.product_option }})</span>
-                      </div>
-                    </div>
-                    <div class="price">{{ format(it.price * it.quantity) }} ฿</div>
-                  </li>
-                </ul>
-              </div>
-
+              <!-- ✅ 3. Actions - ท้ายสุด -->
               <div class="actions">
                 <label class="status-select">
                   <span>อัปเดตสถานะออเดอร์:</span>
@@ -496,11 +498,22 @@ async function forceDelete(order) {
   border-top: 1px dashed var(--c-border);
 }
 
+/* ✅ Items block - ตอนนี้อยู่บนสุดแล้ว ไม่ต้องมี margin-top มาก */
+.items {
+  margin-top: var(--sp-4);
+}
+
+.items h4 {
+  margin: 0 0 var(--sp-2);
+  color: var(--c-text);
+}
+
+/* ✅ Grid block - ย้ายลงมาถัดจาก items แล้ว ต้องมี margin-top */
 .grid {
   display: grid;
   gap: var(--sp-4);
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-top: var(--sp-4);
+  margin-top: var(--sp-5);
 }
 
 .block {
@@ -522,10 +535,7 @@ async function forceDelete(order) {
   border: 1px solid var(--c-border);
 }
 
-/* ---------- Items ---------- */
-.items {
-  margin-top: var(--sp-5);
-}
+/* ---------- Items List ---------- */
 
 .items h4 {
   margin: 0 0 var(--sp-2);

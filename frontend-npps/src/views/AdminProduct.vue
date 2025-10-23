@@ -13,6 +13,34 @@
         </button>
       </header>
 
+      <!-- ✅ Search Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="search-icon">🔎</span>
+          <input
+            v-model="search"
+            type="text"
+            class="search-input"
+            placeholder="ค้นหาสินค้าในร้าน..."
+            aria-label="ค้นหาสินค้า"
+            @keydown.enter.prevent
+            @keydown.esc="clearSearch"
+          />
+          <button
+            v-if="search"
+            class="clear-btn"
+            @click="clearSearch"
+            aria-label="ล้างการค้นหา"
+            title="ล้างการค้นหา (Esc)"
+          >
+            ✕
+          </button>
+        </div>
+        <div class="search-result" v-if="debouncedSearch">
+          พบ <strong>{{ filteredProducts.length }}</strong> รายการ
+        </div>
+      </div>
+
       <section class="card">
         <table class="table">
           <thead>
@@ -27,7 +55,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="p in products" :key="p.product_id">
+            <tr v-for="p in filteredProducts" :key="p.product_id">
               <td class="muted">#{{ p.product_id }}</td>
               <td>
                 <img :src="apiBase + p.image_url" class="thumb" alt="" />
@@ -49,8 +77,10 @@
                 </div>
               </td>
             </tr>
-            <tr v-if="!products.length">
-              <td colspan="7" class="empty">ยังไม่มีสินค้า</td>
+            <tr v-if="!filteredProducts.length">
+              <td colspan="7" class="empty">
+                {{ debouncedSearch ? 'ไม่พบสินค้าที่ตรงกับการค้นหา' : 'ยังไม่มีสินค้า' }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -133,7 +163,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import api from '../lib/api'
 import AdminNavbar from '../components/AdminNavbar.vue'
 import SiteFooter from '../components/SiteFooter.vue'
@@ -148,11 +178,68 @@ const dragging = ref(false)
 const saving = ref(false)
 const msg = ref('')
 
+// ✅ Search functionality
+const search = ref('')
+const debouncedSearch = ref('')
+let debounceTimer = null
+
+// Debounce search input (250ms)
+watch(search, (newVal) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    debouncedSearch.value = newVal
+  }, 250)
+})
+
+// Filter products based on search
+const filteredProducts = computed(() => {
+  const query = debouncedSearch.value.trim().toLowerCase()
+  if (!query) return products.value
+  
+  return products.value.filter(p => {
+    return (
+      p.product_name?.toLowerCase().includes(query) ||
+      p.sku?.toLowerCase().includes(query) ||
+      p.category_name?.toLowerCase().includes(query) ||
+      String(p.product_id).includes(query)
+    )
+  })
+})
+
+// Clear search
+function clearSearch() {
+  search.value = ''
+  debouncedSearch.value = ''
+}
+
 const apiBase =
   import.meta.env.VITE_API_BASE || 'http://localhost:4000'
 
+// Load data and setup keyboard shortcuts
 onMounted(async () => {
+  // Load products and categories
   await Promise.all([loadProducts(), loadCategories()])
+  
+  // Setup keyboard shortcuts for search
+  const handleKeydown = (e) => {
+    // Ctrl/Cmd + K to focus search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault()
+      document.querySelector('.search-input')?.focus()
+    }
+    // Esc to clear search when focused
+    if (e.key === 'Escape' && search.value) {
+      clearSearch()
+      document.querySelector('.search-input')?.blur()
+    }
+  }
+  window.addEventListener('keydown', handleKeydown)
+  
+  // Cleanup on unmount
+  onUnmounted(() => {
+    window.removeEventListener('keydown', handleKeydown)
+    clearTimeout(debounceTimer)
+  })
 })
 
 async function loadProducts() {
@@ -308,6 +395,89 @@ async function removeProduct(id) {
   margin: var(--sp-1) 0 0;
   color: var(--c-text-muted);
   font-size: 14px;
+}
+
+/* ✅ Search Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: min(280px, 100%);
+  max-width: 520px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 14px;
+  color: var(--c-text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) 36px;
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  background: var(--c-card);
+  color: var(--c-text);
+  font-size: 14px;
+  outline: none;
+  transition: all var(--transition-fast) var(--ease);
+}
+
+.search-input:focus {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
+}
+
+.search-input::placeholder {
+  color: var(--c-text-muted);
+}
+
+.clear-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: var(--c-bg-soft);
+  color: var(--c-text-muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast) var(--ease);
+}
+
+.clear-btn:hover {
+  background: var(--c-border);
+  color: var(--c-text);
+}
+
+.search-result {
+  color: var(--c-text-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.search-result strong {
+  color: var(--c-primary);
+  font-weight: 700;
 }
 
 /* Card/Table */
@@ -509,6 +679,20 @@ async function removeProduct(id) {
   .grid {
     grid-template-columns: 1fr;
   }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--sp-3);
+  }
+
+  .search-box {
+    max-width: 100%;
+  }
+
+  .search-result {
+    text-align: center;
+  }
 }
 
 /* Mobile */
@@ -541,6 +725,20 @@ async function removeProduct(id) {
 
   .uploader .drop {
     min-height: 200px;
+  }
+
+  .search-input {
+    font-size: 13px;
+    padding: var(--sp-2) var(--sp-3) var(--sp-2) 32px;
+  }
+
+  .search-icon {
+    left: 10px;
+    font-size: 13px;
+  }
+
+  .search-result {
+    font-size: 13px;
   }
 
   .table {
@@ -591,6 +789,16 @@ async function removeProduct(id) {
 
   .empty-drop .icon {
     font-size: 32px;
+  }
+
+  .search-input {
+    font-size: 12px;
+    padding: var(--sp-2);
+    padding-left: 30px;
+  }
+
+  .search-result {
+    font-size: 12px;
   }
 
   .form {

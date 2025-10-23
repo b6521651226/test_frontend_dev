@@ -11,7 +11,7 @@ export const companyInfo = {
 }
 
 export const contactInfo = {
-  email: 'npps_supply@gmail.com',
+  email: 'nppssupply@hotmail.com',
   phone: '098-280-0692',
   phoneFormatted: '098-280-0692',
   phoneLink: 'tel:+66982800692',

@@ -24,7 +24,7 @@
         </div>
       </header>
 
-      <!-- Product Grid -->
+      <!-- Product Grid - แสดงสินค้าทั้งหมดในหน้าเดียว -->
       <section class="grid">
         <article class="card product-card" v-for="product in filteredProducts" :key="product.product_id">
           <img :src="apiBase + product.image_url" :alt="product.product_name" class="product-image" />
@@ -46,13 +46,6 @@
           <button class="btn primary" @click="addToCart(product)">เพิ่มไปยังตะกร้า</button>
         </article>
       </section>
-
-      <!-- Pagination -->
-      <div class="pager">
-        <button class="btn ghost sm" @click="prevPage">ก่อนหน้า</button>
-        <span class="page-indicator">หน้า {{ page }}</span>
-        <button class="btn ghost sm" @click="nextPage">ถัดไป</button>
-      </div>
     </div>
   </div>
 </template>
@@ -62,8 +55,6 @@ import { ref, computed, onMounted } from 'vue'
 import api from '@/lib/api'
 
 const search = ref('')
-const page = ref(1)
-const itemsPerPage = 4
 const products = ref([])
 const loading = ref(true)
 const categories = ref([])           // ✅ หมวดหมู่ทั้งหมด
@@ -96,23 +87,14 @@ async function loadProducts() {
 }
 
 function reloadByCategory() {
-  page.value = 1
   loadProducts()
 }
 
+// ✅ แสดงสินค้าทั้งหมดหลังกรองด้วย search - ไม่มี pagination
 const filteredProducts = computed(() => {
-  const start = (page.value - 1) * itemsPerPage
   return products.value
     .filter(p => (p.product_name || '').toLowerCase().includes((search.value || '').toLowerCase()))
-    .slice(start, start + itemsPerPage)
 })
-
-function nextPage() {
-  if ((page.value + 1) * itemsPerPage <= products.value.length) page.value++
-}
-function prevPage() {
-  if (page.value > 1) page.value--
-}
 
 function clampQty(p) {
   if (!p.qty || p.qty < 1) p.qty = 1
@@ -393,25 +375,7 @@ async function addToCart(product) {
   font-size: 14px;
 }
 
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-4);
-  padding: var(--sp-5);
-  background: var(--c-card);
-  border-radius: var(--radius);
-  border: 1px solid var(--c-border);
-}
-
-.page-indicator {
-  font-weight: 700;
-  color: var(--c-text);
-  padding: var(--sp-2) var(--sp-4);
-  background: var(--c-bg-soft);
-  border-radius: 8px;
-}
-
+/* ✅ Responsive Styles */
 @media (max-width: 1024px) {
   .wrap {
     padding: var(--sp-5) var(--sp-4);

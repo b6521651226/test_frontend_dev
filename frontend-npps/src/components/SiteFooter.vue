@@ -1,5 +1,5 @@
 <script setup>
-import { companyInfo, contactInfo, quickLinks, copyright } from '@/data/siteMeta'
+import { companyInfo, contactInfo, quickLinks, copyright } from '@/data/siteMeta.js'
 </script>
 
 <template>

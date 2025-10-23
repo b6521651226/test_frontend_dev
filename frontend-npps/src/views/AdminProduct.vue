@@ -114,6 +114,15 @@
                 </label>
               </div>
             </div>
+            
+            <!-- ✅ ปุ่มเปลี่ยนรูปภาพ (แสดงเมื่อมีรูปพรีวิวอยู่แล้ว) -->
+            <div v-if="previewUrl" class="change-image-section">
+              <label class="btn ghost sm change-image-btn">
+                {{ form.product_id ? 'เปลี่ยนรูปภาพ' : 'เปลี่ยนรูป' }}
+                <input type="file" accept="image/*" hidden @change="onFileChange" />
+              </label>
+            </div>
+            
             <small class="muted">รองรับ .jpg .png • แนะนำขนาดรูปสี่เหลี่ยมจัตุรัส</small>
           </div>
 
@@ -857,6 +866,18 @@ async function removeProduct(id) {
   height: 100%;
   object-fit: cover;
   border-radius: 10px;
+}
+
+/* ✅ ปุ่มเปลี่ยนรูปภาพ */
+.change-image-section {
+  margin-top: var(--sp-3);
+  text-align: center;
+}
+
+.change-image-btn {
+  width: 100%;
+  justify-content: center;
+  cursor: pointer;
 }
 
 /* Form */
